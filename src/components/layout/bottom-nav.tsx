@@ -32,7 +32,7 @@ export function BottomNav() {
       <div className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur-sm md:hidden">
         <nav className="flex h-full items-center justify-around">
           <NavItem href="/" icon={LayoutGrid} label="Tổng quan" />
-          <NavItem href="/tags" icon={Tags} label="Tags" />
+          <NavItem href="/tags" icon={Tags} label="Hạng mục" />
           
           <div className="w-16 flex justify-center">
             <button
