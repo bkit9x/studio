@@ -5,18 +5,20 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, Banknote, Scale } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Wallet } from "@/lib/types";
 
 type OverviewCardsProps = {
+    balance: number;
     totalIncome: number;
     totalExpense: number;
-    wallets: { id: string, name: string }[];
-    selectedWalletId: string;
+    wallets: Wallet[];
+    selectedWalletId: string | undefined;
     onWalletChange: (walletId: string) => void;
 };
 
-export function OverviewCards({ totalIncome, totalExpense, wallets, selectedWalletId, onWalletChange }: OverviewCardsProps) {
-    const balance = totalIncome - totalExpense;
-
+export function OverviewCards({ balance, totalIncome, totalExpense, wallets, selectedWalletId, onWalletChange }: OverviewCardsProps) {
+    const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+    
     return (
         <div className="grid grid-cols-2 gap-4">
             <Card>
@@ -27,7 +29,7 @@ export function OverviewCards({ totalIncome, totalExpense, wallets, selectedWall
                 <CardContent>
                     <Select value={selectedWalletId} onValueChange={onWalletChange}>
                         <SelectTrigger className="text-lg font-bold p-2 h-auto">
-                            <SelectValue placeholder="Chọn ví" />
+                            <SelectValue placeholder="Chọn ví">{selectedWallet?.name ?? "Chọn ví"}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {wallets.map(wallet => (

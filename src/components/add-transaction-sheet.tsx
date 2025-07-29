@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Wallet } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -9,8 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
-import { mockTags, mockWallets } from '@/data/mock-data';
-import type { Transaction, TransactionType } from '@/lib/types';
+import { mockTags } from '@/data/mock-data';
+import type { Transaction, TransactionType, Wallet as WalletType } from '@/lib/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { mockWallets } from '@/data/mock-data';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -37,6 +38,8 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (isOpen: boolean) => void; }) {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
+  const [wallets] = useLocalStorage<WalletType[]>("wallets", mockWallets);
+  const [selectedWalletId] = useLocalStorage<string | undefined>("selectedWalletId");
   const { toast } = useToast();
 
   const form = useForm<TransactionFormValues>({
@@ -46,9 +49,23 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
       amount: 0,
       description: '',
       createdAt: new Date(),
-      walletId: mockWallets[0]?.id,
+      walletId: selectedWalletId || wallets[0]?.id,
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+        form.reset({
+            type: 'expense',
+            amount: 0,
+            description: '',
+            createdAt: new Date(),
+            walletId: selectedWalletId || wallets[0]?.id,
+            tagId: undefined
+        });
+    }
+  }, [isOpen, selectedWalletId, wallets, form]);
+
 
   function onSubmit(data: TransactionFormValues) {
     const newTransaction: Transaction = {
@@ -61,22 +78,12 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
       description: "Đã thêm giao dịch mới.",
     });
     onOpenChange(false);
-    form.reset({
-      type: 'expense',
-      amount: 0,
-      description: '',
-      createdAt: new Date(),
-      walletId: mockWallets[0]?.id,
-    });
   }
 
   const transactionType = form.watch('type');
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => {
-      if (!open) form.reset();
-      onOpenChange(open);
-    }}>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
         <SheetHeader>
           <SheetTitle>Thêm giao dịch mới</SheetTitle>
@@ -93,7 +100,10 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
               render={({ field }) => (
                 <Tabs 
                   value={field.value}
-                  onValueChange={(value) => field.onChange(value as TransactionType)}
+                  onValueChange={(value) => {
+                    field.onChange(value as TransactionType);
+                    form.setValue('tagId', ''); // Reset tag when type changes
+                  }}
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
@@ -125,7 +135,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ví</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                            <Wallet className="mr-2 h-4 w-4" />
@@ -133,7 +143,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {mockWallets.map(wallet => (
+                        {wallets.map(wallet => (
                             <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
                         ))}
                       </SelectContent>

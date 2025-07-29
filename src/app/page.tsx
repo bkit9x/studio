@@ -4,20 +4,32 @@
 import { useEffect, useState } from "react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { mockWallets } from "@/data/mock-data";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import type { Transaction } from "@/lib/types";
+import type { Transaction, Wallet } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { mockWallets } from "@/data/mock-data";
 
 export default function Home() {
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [isClient, setIsClient] = useState(false);
-  const [selectedWalletId, setSelectedWalletId] = useState<string>(mockWallets[0]?.id || '1');
+  
+  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
+  const [wallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
+
+  const [selectedWalletId, setSelectedWalletId] = useLocalStorage<string | undefined>(
+    "selectedWalletId", 
+    wallets[0]?.id
+  );
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // Ensure selectedWalletId is valid
+    if (!selectedWalletId || !wallets.find(w => w.id === selectedWalletId)) {
+      setSelectedWalletId(wallets[0]?.id);
+    }
+  }, [wallets, selectedWalletId, setSelectedWalletId]);
 
+  const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+  
   const filteredTransactions = transactions.filter(t => t.walletId === selectedWalletId);
 
   const totalIncome = filteredTransactions
@@ -28,6 +40,9 @@ export default function Home() {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const balance = (selectedWallet?.initialBalance ?? 0) + totalIncome - totalExpense;
+
+
   return (
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
       <header>
@@ -37,9 +52,10 @@ export default function Home() {
       
       {isClient ? (
         <OverviewCards 
+          balance={balance}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
-          wallets={mockWallets}
+          wallets={wallets}
           selectedWalletId={selectedWalletId}
           onWalletChange={setSelectedWalletId}
         />
