@@ -7,12 +7,20 @@ import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useEffect, useState } from 'react';
 
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     const tag = mockTags.find(t => t.id === transaction.tagId);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     if (!tag) return null;
 
     const isIncome = transaction.type === 'income';
+    const formattedTime = isMounted ? format(transaction.createdAt, 'HH:mm') : null;
 
     return (
         <div className="flex items-center space-x-4 p-4">
@@ -21,7 +29,9 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
             </div>
             <div className="flex-1">
                 <p className="font-medium truncate">{transaction.description}</p>
-                <p className="text-sm text-muted-foreground">{tag.name} ・ {format(transaction.createdAt, 'HH:mm')}</p>
+                <p className="text-sm text-muted-foreground">
+                    {tag.name} {formattedTime && `・ ${formattedTime}`}
+                </p>
             </div>
             <div className={cn("font-bold text-right", isIncome ? "text-[hsl(var(--chart-2))]" : "text-destructive")}>
                 {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
