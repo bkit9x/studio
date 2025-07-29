@@ -3,13 +3,13 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Wallet } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
-import { mockTags } from '@/data/mock-data';
+import { mockTags, mockWallets } from '@/data/mock-data';
 import type { Transaction, TransactionType } from '@/lib/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useToast } from '@/hooks/use-toast';
@@ -17,18 +17,19 @@ import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
   amount: z.coerce.number().min(1, { message: 'Số tiền phải lớn hơn 0.' }),
   description: z.string().min(1, { message: 'Mô tả không được để trống.' }),
   tagId: z.string({ required_error: 'Vui lòng chọn một hạng mục.' }),
+  walletId: z.string({ required_error: 'Vui lòng chọn một ví.' }),
   createdAt: z.date(),
 });
 
@@ -45,13 +46,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
       amount: 0,
       description: '',
       createdAt: new Date(),
+      walletId: mockWallets[0]?.id,
     },
   });
 
   function onSubmit(data: TransactionFormValues) {
     const newTransaction: Transaction = {
       id: crypto.randomUUID(),
-      walletId: '1', // Hardcoded for now
       ...data
     };
     setTransactions([newTransaction, ...transactions]);
@@ -60,7 +61,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
       description: "Đã thêm giao dịch mới.",
     });
     onOpenChange(false);
-    form.reset();
+    form.reset({
+      type: 'expense',
+      amount: 0,
+      description: '',
+      createdAt: new Date(),
+      walletId: mockWallets[0]?.id,
+    });
   }
 
   const transactionType = form.watch('type');
@@ -110,6 +117,55 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="walletId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ví</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                           <Wallet className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Chọn ví" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {mockWallets.map(wallet => (
+                            <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="createdAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ngày</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, "dd/MM/yy") : <span>Chọn ngày</span>}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -155,30 +211,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                      <ScrollBar orientation="horizontal" />
                    </ScrollArea>
                    <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="createdAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ngày giao dịch</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : <span>Chọn ngày</span>}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
                 </FormItem>
               )}
             />

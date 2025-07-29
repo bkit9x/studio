@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -9,9 +10,11 @@ type OverviewCardsProps = {
     totalIncome: number;
     totalExpense: number;
     wallets: { id: string, name: string }[];
+    selectedWalletId: string;
+    onWalletChange: (walletId: string) => void;
 };
 
-export function OverviewCards({ totalIncome, totalExpense, wallets }: OverviewCardsProps) {
+export function OverviewCards({ totalIncome, totalExpense, wallets, selectedWalletId, onWalletChange }: OverviewCardsProps) {
     const balance = totalIncome - totalExpense;
 
     return (
@@ -22,7 +25,7 @@ export function OverviewCards({ totalIncome, totalExpense, wallets }: OverviewCa
                     <Banknote className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <Select defaultValue={wallets[0]?.id}>
+                    <Select value={selectedWalletId} onValueChange={onWalletChange}>
                         <SelectTrigger className="text-lg font-bold p-2 h-auto">
                             <SelectValue placeholder="Chọn ví" />
                         </SelectTrigger>

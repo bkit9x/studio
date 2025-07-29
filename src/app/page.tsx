@@ -4,24 +4,27 @@
 import { useEffect, useState } from "react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { mockWallets, mockTransactions } from "@/data/mock-data";
+import { mockWallets } from "@/data/mock-data";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { Transaction } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
+  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [isClient, setIsClient] = useState(false);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>(mockWallets[0]?.id || '1');
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const totalIncome = transactions
+  const filteredTransactions = transactions.filter(t => t.walletId === selectedWalletId);
+
+  const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -37,6 +40,8 @@ export default function Home() {
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           wallets={mockWallets}
+          selectedWalletId={selectedWalletId}
+          onWalletChange={setSelectedWalletId}
         />
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -48,7 +53,7 @@ export default function Home() {
       )}
       
       {isClient ? (
-        <TransactionList transactions={transactions} />
+        <TransactionList transactions={filteredTransactions} />
       ) : (
         <div className="space-y-4">
           <Skeleton className="h-12" />
