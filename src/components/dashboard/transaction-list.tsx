@@ -13,15 +13,16 @@ import { useEffect, useState } from 'react';
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     const tag = mockTags.find(t => t.id === transaction.tagId);
     const [isMounted, setIsMounted] = useState(false);
-    const transactionDate = typeof transaction.createdAt === 'string' 
-        ? new Date(transaction.createdAt) 
-        : transaction.createdAt;
-
+    
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
     if (!tag) return null;
+    
+    const transactionDate = typeof transaction.createdAt === 'string' 
+        ? new Date(transaction.createdAt) 
+        : transaction.createdAt;
 
     const isIncome = transaction.type === 'income';
     const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;

@@ -1,14 +1,21 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { mockWallets, mockTransactions } from "@/data/mock-data";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { Transaction } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const totalIncome = transactions
     .filter(t => t.type === 'income')
@@ -25,13 +32,31 @@ export default function Home() {
         <p className="text-muted-foreground">Chào mừng trở lại!</p>
       </header>
       
-      <OverviewCards 
-        totalIncome={totalIncome}
-        totalExpense={totalExpense}
-        wallets={mockWallets}
-      />
+      {isClient ? (
+        <OverviewCards 
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          wallets={mockWallets}
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      )}
       
-      <TransactionList transactions={transactions} />
+      {isClient ? (
+        <TransactionList transactions={transactions} />
+      ) : (
+        <div className="space-y-4">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      )}
     </div>
   );
 }
