@@ -1,6 +1,7 @@
+
 "use client";
 
-import { mockTransactions, mockTags } from '@/data/mock-data';
+import { mockTags } from '@/data/mock-data';
 import type { Transaction } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
@@ -12,6 +13,9 @@ import { useEffect, useState } from 'react';
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     const tag = mockTags.find(t => t.id === transaction.tagId);
     const [isMounted, setIsMounted] = useState(false);
+    const transactionDate = typeof transaction.createdAt === 'string' 
+        ? new Date(transaction.createdAt) 
+        : transaction.createdAt;
 
     useEffect(() => {
         setIsMounted(true);
@@ -20,7 +24,7 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     if (!tag) return null;
 
     const isIncome = transaction.type === 'income';
-    const formattedTime = isMounted ? format(transaction.createdAt, 'HH:mm') : null;
+    const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;
 
     return (
         <div className="flex items-center space-x-4 p-4">
@@ -40,9 +44,9 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     );
 }
 
-export function TransactionList() {
-    const groupedTransactions = mockTransactions.reduce((acc, tx) => {
-        const dateKey = format(tx.createdAt, 'yyyy-MM-dd');
+export function TransactionList({ transactions }: { transactions: Transaction[] }) {
+    const groupedTransactions = transactions.reduce((acc, tx) => {
+        const dateKey = format(new Date(tx.createdAt), 'yyyy-MM-dd');
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -67,7 +71,7 @@ export function TransactionList() {
                     <Card>
                         <CardContent className="divide-y p-0">
                            {groupedTransactions[date]
-                            .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
+                            .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .map(tx => <TransactionItem key={tx.id} transaction={tx} />)}
                         </CardContent>
                     </Card>

@@ -1,15 +1,20 @@
+
 "use client";
 
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { mockWallets, mockTransactions } from "@/data/mock-data";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import type { Transaction } from "@/lib/types";
 
 export default function Home() {
-  const totalIncome = mockTransactions
+  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
+
+  const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = mockTransactions
+  const totalExpense = transactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -26,7 +31,7 @@ export default function Home() {
         wallets={mockWallets}
       />
       
-      <TransactionList />
+      <TransactionList transactions={transactions} />
     </div>
   );
 }
