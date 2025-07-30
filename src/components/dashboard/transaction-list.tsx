@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import React, { useEffect, useState, useRef } from 'react';
-import { icons, type LucideIcon, Trash2, Edit } from 'lucide-react';
+import { icons, type LucideIcon, Trash2, Edit, MoreVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +21,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
 import { AddTransactionSheet } from '@/components/add-transaction-sheet';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: Tag | undefined }) => {
+
+const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction: Transaction, tag: Tag | undefined, onUpdate: () => void, onDelete: () => void }) => {
     const [isMounted, setIsMounted] = useState(false);
+    const isMobile = useIsMobile();
     
     useEffect(() => {
         setIsMounted(true);
@@ -56,6 +66,25 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
             <div className={cn("font-bold text-right", isIncome ? "text-[hsl(var(--chart-2))]" : "text-destructive")}>
                 {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
             </div>
+            {!isMobile && !isIncome && (
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                           <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={onUpdate}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Sửa</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Xóa</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </div>
     );
 }
@@ -64,6 +93,7 @@ const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { tr
     const itemRef = useRef<HTMLDivElement>(null);
     const [dragX, setDragX] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const isMobile = useIsMobile();
 
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
         setIsDragging(true);
@@ -74,8 +104,7 @@ const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { tr
         if (isDragging) {
             const currentX = e.touches[0].clientX;
             const newDragX = currentX - (itemRef.current?.getBoundingClientRect().left ?? 0);
-            // Limit swipe to one direction at a time and prevent swiping too far
-             if (newDragX < -150) {
+            if (newDragX < -150) {
                 setDragX(-150);
             } else if (newDragX > 150) {
                 setDragX(150);
@@ -89,27 +118,30 @@ const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { tr
         setIsDragging(false);
         itemRef.current?.style.removeProperty('transition');
         
-        if (dragX < -80) { // Swipe left threshold
+        if (dragX < -80) { 
             onUpdate();
-        } else if (dragX > 80) { // Swipe right threshold
+        } else if (dragX > 80) { 
             onDelete();
         }
         
-        // Reset position smoothly
         setDragX(0);
     };
-
+    
     const isIncome = transaction.type === 'income';
+
+    if (!isMobile || isIncome) {
+        return <TransactionItem transaction={transaction} tag={tag} onUpdate={onUpdate} onDelete={onDelete} />
+    }
 
     return (
         <div className="relative overflow-hidden">
-             <div className="absolute inset-y-0 left-0 flex items-center justify-start bg-blue-500 text-white w-2/3" style={{ transform: `translateX(${Math.max(0, dragX) - 80}px)`}}>
+             <div className="absolute inset-y-0 left-0 flex items-center justify-start bg-red-500 text-white w-2/3" style={{ transform: `translateX(${Math.max(0, dragX - 80)}px)`}}>
                 <div className="flex items-center px-6">
                     <Trash2 className="h-5 w-5 mr-2" />
                     <span>Xóa</span>
                 </div>
             </div>
-            <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-orange-500 text-white w-2/3" style={{ transform: `translateX(${Math.min(0, dragX) + 80}px)`}}>
+            <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-blue-500 text-white w-2/3" style={{ transform: `translateX(${Math.min(0, dragX + 80)}px)`}}>
                 <div className="flex items-center px-6">
                     <Edit className="h-5 w-5 mr-2" />
                     <span>Sửa</span>
@@ -119,11 +151,11 @@ const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { tr
                 ref={itemRef}
                 className="w-full relative z-10"
                 style={{ transform: `translateX(${dragX}px)`, transition: 'transform 0.3s ease' }}
-                onTouchStart={!isIncome ? handleTouchStart : undefined}
-                onTouchMove={!isIncome ? handleTouchMove : undefined}
-                onTouchEnd={!isIncome ? handleTouchEnd : undefined}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             >
-                <TransactionItem transaction={transaction} tag={tag} />
+                <TransactionItem transaction={transaction} tag={tag} onUpdate={onUpdate} onDelete={onDelete} />
             </div>
         </div>
     );
@@ -222,11 +254,10 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Hủy</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm}>Xóa</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Xóa</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </div>
     );
 }
-
