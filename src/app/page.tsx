@@ -7,12 +7,12 @@ import { TransactionList } from "@/components/dashboard/transaction-list";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { Transaction, Wallet } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockWallets } from "@/data/mock-data";
+import { mockWallets, mockTransactions } from "@/data/mock-data";
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
   
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
+  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
   const [wallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
 
   const [selectedWalletId, setSelectedWalletId] = useLocalStorage<string | undefined>(
@@ -23,14 +23,18 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
     // Ensure selectedWalletId is valid
-    if (!selectedWalletId || !wallets.find(w => w.id === selectedWalletId)) {
+    if (!selectedWalletId && wallets.length > 0) {
+      setSelectedWalletId(wallets[0].id);
+    } else if (selectedWalletId && !wallets.find(w => w.id === selectedWalletId)) {
       setSelectedWalletId(wallets[0]?.id);
     }
   }, [wallets, selectedWalletId, setSelectedWalletId]);
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
   
-  const filteredTransactions = transactions.filter(t => t.walletId === selectedWalletId);
+  const filteredTransactions = selectedWalletId 
+    ? transactions.filter(t => t.walletId === selectedWalletId)
+    : [];
 
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')

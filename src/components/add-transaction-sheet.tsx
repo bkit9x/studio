@@ -9,8 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
-import { mockTags } from '@/data/mock-data';
-import type { Transaction, TransactionType, Wallet as WalletType } from '@/lib/types';
+import { mockTags, mockWallets } from '@/data/mock-data';
+import type { Transaction, TransactionType, Wallet as WalletType, Tag } from '@/lib/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +23,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockWallets } from '@/data/mock-data';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -39,6 +38,7 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (isOpen: boolean) => void; }) {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [wallets] = useLocalStorage<WalletType[]>("wallets", mockWallets);
+  const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
   const [selectedWalletId] = useLocalStorage<string | undefined>("selectedWalletId");
   const { toast } = useToast();
 
@@ -70,7 +70,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
   function onSubmit(data: TransactionFormValues) {
     const newTransaction: Transaction = {
       id: crypto.randomUUID(),
-      ...data
+      ...data,
+      createdAt: data.createdAt.toISOString(), // Store as ISO string
     };
     setTransactions([newTransaction, ...transactions]);
     toast({
@@ -101,8 +102,17 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                 <Tabs 
                   value={field.value}
                   onValueChange={(value) => {
-                    field.onChange(value as TransactionType);
-                    form.setValue('tagId', ''); // Reset tag when type changes
+                    const newType = value as TransactionType;
+                    field.onChange(newType);
+                    // Reset tag when type changes
+                    form.setValue('tagId', ''); 
+                    // Auto-select "Thu nhập" tag if type is income
+                    if (newType === 'income') {
+                        const incomeTag = tags.find(t => t.name === 'Thu nhập');
+                        if (incomeTag) {
+                            form.setValue('tagId', incomeTag.id);
+                        }
+                    }
                   }}
                   className="w-full"
                 >
@@ -199,7 +209,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                   <FormLabel>Chọn hạng mục</FormLabel>
                    <ScrollArea className="w-full whitespace-nowrap">
                      <div className="flex w-max space-x-2 p-2">
-                        {mockTags
+                        {tags
                           .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
                           .map(tag => (
                             <button 

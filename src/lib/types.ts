@@ -23,5 +23,5 @@ export type Transaction = {
   type: TransactionType;
   amount: number;
   description: string;
-  createdAt: Date;
+  createdAt: Date | string; // Allow string for serialization
 };

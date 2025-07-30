@@ -1,8 +1,9 @@
 
 "use client";
 
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import { mockTags } from '@/data/mock-data';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -10,8 +11,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 
-const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
-    const tag = mockTags.find(t => t.id === transaction.tagId);
+const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: Tag | undefined }) => {
     const [isMounted, setIsMounted] = useState(false);
     
     useEffect(() => {
@@ -46,6 +46,10 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
 }
 
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
+    const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
+
+    const getTagById = (id: string) => tags.find(t => t.id === id);
+
     const groupedTransactions = transactions.reduce((acc, tx) => {
         const dateKey = format(new Date(tx.createdAt), 'yyyy-MM-dd');
         if (!acc[dateKey]) {
@@ -66,6 +70,13 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
 
     return (
         <div className="space-y-4">
+             {transactions.length === 0 && (
+                <Card>
+                    <CardContent className="p-4 text-center text-muted-foreground">
+                        Chưa có giao dịch nào.
+                    </CardContent>
+                </Card>
+            )}
             {sortedDates.map(date => (
                 <div key={date}>
                     <h3 className="text-sm font-medium text-muted-foreground px-2 py-1">{formatDateHeading(date)}</h3>
@@ -73,7 +84,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                         <CardContent className="divide-y p-0">
                            {groupedTransactions[date]
                             .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                            .map(tx => <TransactionItem key={tx.id} transaction={tx} />)}
+                            .map(tx => <TransactionItem key={tx.id} transaction={tx} tag={getTagById(tx.tagId)} />)}
                         </CardContent>
                     </Card>
                 </div>
