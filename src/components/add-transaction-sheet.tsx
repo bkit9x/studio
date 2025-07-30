@@ -36,7 +36,7 @@ const transactionSchema = z.object({
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 const TagButton = ({ tag, isSelected, onClick }: { tag: Tag, isSelected: boolean, onClick: () => void }) => {
-    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
+    const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
 
     return (
          <button 

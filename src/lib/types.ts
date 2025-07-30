@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 import { icons } from 'lucide-react';
 
@@ -10,7 +11,7 @@ export type Wallet = {
 export type Tag = {
   id: string;
   name: string;
-  icon: keyof typeof icons | LucideIcon;
+  icon: keyof typeof icons;
   textColor: string;
   bgColor: string;
 };

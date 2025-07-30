@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreVertical, Edit, Trash2, type LucideIcon } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { mockTags } from "@/data/mock-data";
+import { mockTags, mockTransactions } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import type { Tag, Transaction } from "@/lib/types";
@@ -27,14 +27,13 @@ import { icons } from 'lucide-react';
 
 
 const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, onEdit: () => void, onDelete: () => void }) => {
-    // Handle both component and string icon types
-    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
+    const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
 
     return (
     <Card>
         <CardContent className="p-4 flex items-center space-x-4">
              <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", tag.bgColor)}>
-                {IconComponent && <IconComponent className={cn("h-6 w-6", tag.textColor)} />}
+                {IconComponent ? <IconComponent className={cn("h-6 w-6", tag.textColor)} /> : null}
             </div>
             <div className="flex-1">
                 <div className="flex justify-between items-center">

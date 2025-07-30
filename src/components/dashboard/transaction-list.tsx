@@ -21,7 +21,7 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
 
     if (!tag) return null;
 
-    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
+    const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
     
     const transactionDate = typeof transaction.createdAt === 'string' 
         ? new Date(transaction.createdAt) 

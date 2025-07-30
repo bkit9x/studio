@@ -71,14 +71,9 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     if (isOpen) {
         if (tag) {
             const colorIndex = colors.findIndex(c => c.bgColor === tag.bgColor);
-            const iconName = typeof tag.icon === 'string' 
-                ? tag.icon 
-                // @ts-ignore
-                : (Object.keys(icons) as (keyof typeof icons)[]).find(key => icons[key] === tag.icon) || 'ShoppingCart';
-            
             form.reset({
                 name: tag.name,
-                icon: iconName,
+                icon: tag.icon,
                 colorIndex: colorIndex !== -1 ? colorIndex : 0,
             });
         } else {
@@ -111,9 +106,10 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     } else { 
         const newTag: Tag = {
             id: crypto.randomUUID(),
-            ...newTagData,
-            // @ts-ignore
-            icon: newTagData.icon
+            name: newTagData.name,
+            icon: newTagData.icon,
+            textColor: newTagData.textColor,
+            bgColor: newTagData.bgColor,
         };
         setTags([...tags, newTag]);
         toast({
@@ -174,7 +170,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
                     <FormControl>
                       <SelectTrigger>
                         <div className="flex items-center gap-2">
-                            <SelectedIcon />
+                            {SelectedIcon && <SelectedIcon />}
                             <SelectValue placeholder="Chọn biểu tượng" />
                         </div>
                       </SelectTrigger>
@@ -228,7 +224,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
             <div className="flex items-center justify-center space-x-4 rounded-lg p-4 border">
                 <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", selectedColor.bgColor)}>
-                    <SelectedIcon className={cn("h-6 w-6", selectedColor.textColor)} />
+                    {SelectedIcon && <SelectedIcon className={cn("h-6 w-6", selectedColor.textColor)} />}
                 </div>
                 <div className="flex-1">
                     <p className="font-bold">{form.watch('name') || 'Tên hạng mục'}</p>
