@@ -106,8 +106,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col p-0">
+        <SheetHeader className="p-6 pb-0">
           <SheetTitle>Thêm giao dịch mới</SheetTitle>
           <SheetDescription>
             Thêm một khoản thu hoặc chi mới vào sổ của bạn.
@@ -115,7 +115,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
         </SheetHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto pr-6 space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4">
             <FormField
               control={form.control}
               name="type"
@@ -135,7 +135,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                         }
                     }
                   }}
-                  className="w-full"
+                  className="w-full pt-4"
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="expense">Chi tiền</TabsTrigger>
@@ -152,7 +152,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                 <FormItem>
                   <FormLabel>Số tiền</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="0" className="text-2xl h-14 font-bold text-right" />
+                    <Input {...field} type="number" placeholder="0" className="text-xl h-14 font-bold text-right" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -228,8 +228,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chọn hạng mục</FormLabel>
-                   <ScrollArea className="w-full whitespace-nowrap">
-                     <div className="flex w-max space-x-2 p-2">
+                   <ScrollArea className="w-full whitespace-nowrap -mx-2 px-2">
+                     <div className="flex w-max space-x-2 py-2">
                         {tags
                           .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
                           .map(tag => (
@@ -248,7 +248,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
               )}
             />
           
-            <SheetFooter className="pt-4">
+            <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6">
                 <Button type="submit" className="w-full">Lưu giao dịch</Button>
             </SheetFooter>
           </form>

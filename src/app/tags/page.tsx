@@ -159,7 +159,7 @@ export default function TagsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý Hạng mục</h1>
         <Button onClick={handleAddTag}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Thêm Hạng mục
+            <PlusCircle className="mr-2 h-4 w-4" /> Thêm
         </Button>
       </div>
       <p className="text-muted-foreground">Tạo, quản lý và đặt hạn mức chi tiêu cho các hạng mục.</p>

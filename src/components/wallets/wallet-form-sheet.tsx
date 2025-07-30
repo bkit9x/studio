@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 
 const walletSchema = z.object({
   name: z.string().min(1, { message: 'Tên ví không được để trống.' }),
-  initialBalance: z.coerce.number().min(0, { message: 'Số dư phải là số dương.' }),
+  initialBalance: z.coerce.number().min(0, { message: 'Số dư phải là số không âm.' }),
 });
 
 type WalletFormValues = z.infer<typeof walletSchema>;
@@ -84,8 +84,8 @@ export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormShee
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col p-0">
+        <SheetHeader className="p-6 pb-0">
           <SheetTitle>{wallet ? 'Chỉnh sửa ví' : 'Thêm ví mới'}</SheetTitle>
           <SheetDescription>
             {wallet ? 'Cập nhật thông tin cho ví của bạn.' : 'Tạo một ví mới để theo dõi chi tiêu.'}
@@ -93,7 +93,7 @@ export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormShee
         </SheetHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto pr-6 space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4 pt-4">
 
             <FormField
               control={form.control}
@@ -123,7 +123,7 @@ export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormShee
               )}
             />
           
-            <SheetFooter className="pt-4">
+            <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6">
                 <Button type="submit" className="w-full">{wallet ? 'Lưu thay đổi' : 'Tạo ví'}</Button>
             </SheetFooter>
           </form>

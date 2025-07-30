@@ -26,7 +26,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const iconNames = Object.keys(icons) as (keyof typeof icons)[];
+const spendingIcons = [
+  'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
+  'Plane', 'Film', 'Music', 'BookOpen', 'Gamepad2', 'Briefcase', 'Coffee', 'Pizza',
+  'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
+  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake', 'Bone',
+  'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
+] as const;
+
+const incomeIcons = ['Plus', 'Landmark', 'Briefcase', 'Gift'] as const;
+
+const iconNames = [...new Set([...spendingIcons, ...incomeIcons])];
+
 
 const colors = [
     { name: 'Xanh dương', textColor: 'text-blue-500', bgColor: 'bg-blue-100' },
@@ -141,8 +152,8 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col p-0">
+        <SheetHeader className="p-6 pb-0">
           <SheetTitle>{tag ? 'Chỉnh sửa hạng mục' : 'Thêm hạng mục mới'}</SheetTitle>
           <SheetDescription>
             {tag ? 'Cập nhật thông tin cho hạng mục của bạn.' : 'Tạo một hạng mục mới để phân loại giao dịch.'}
@@ -150,7 +161,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         </SheetHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto pr-6 space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4 pt-4">
 
             <FormField
               control={form.control}
@@ -253,7 +264,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
             </div>
 
           
-            <SheetFooter className="pt-4">
+            <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6">
                 <Button type="submit" className="w-full">{tag ? 'Lưu thay đổi' : 'Tạo hạng mục'}</Button>
             </SheetFooter>
           </form>
