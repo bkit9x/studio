@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { icons } from 'lucide-react';
+import { icons, type LucideIcon } from 'lucide-react';
 
 import type { Tag } from '@/lib/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -71,10 +71,14 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     if (isOpen) {
         if (tag) {
             const colorIndex = colors.findIndex(c => c.bgColor === tag.bgColor);
+            const iconName = typeof tag.icon === 'string' 
+                ? tag.icon 
+                // @ts-ignore
+                : (Object.keys(icons) as (keyof typeof icons)[]).find(key => icons[key] === tag.icon) || 'ShoppingCart';
+            
             form.reset({
                 name: tag.name,
-                // @ts-ignore
-                icon: tag.icon.displayName || 'ShoppingCart',
+                icon: iconName,
                 colorIndex: colorIndex !== -1 ? colorIndex : 0,
             });
         } else {
@@ -92,8 +96,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     const selectedColor = colors[data.colorIndex];
     const newTagData = {
         name: data.name,
-        // @ts-ignore
-        icon: icons[data.icon],
+        icon: data.icon as keyof typeof icons,
         textColor: selectedColor.textColor,
         bgColor: selectedColor.bgColor,
     };
@@ -109,6 +112,8 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         const newTag: Tag = {
             id: crypto.randomUUID(),
             ...newTagData,
+            // @ts-ignore
+            icon: newTagData.icon
         };
         setTags([...tags, newTag]);
         toast({
@@ -165,7 +170,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Biểu tượng</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <div className="flex items-center gap-2">

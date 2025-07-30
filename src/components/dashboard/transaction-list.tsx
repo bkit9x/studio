@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
+import { icons, type LucideIcon } from 'lucide-react';
 
 const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: Tag | undefined }) => {
     const [isMounted, setIsMounted] = useState(false);
@@ -19,6 +20,8 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
     }, []);
 
     if (!tag) return null;
+
+    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
     
     const transactionDate = typeof transaction.createdAt === 'string' 
         ? new Date(transaction.createdAt) 
@@ -30,7 +33,7 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
     return (
         <div className="flex items-center space-x-4 p-4">
             <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tag.bgColor)}>
-                <tag.icon className={cn("h-5 w-5", tag.textColor)} />
+                {IconComponent && <IconComponent className={cn("h-5 w-5", tag.textColor)} />}
             </div>
             <div className="flex-1">
                 <p className="font-medium truncate">{transaction.description}</p>

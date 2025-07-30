@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, MoreVertical, Edit, Trash2, type LucideIcon } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { mockTags } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
@@ -23,13 +23,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { icons } from 'lucide-react';
 
 
-const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, onEdit: () => void, onDelete: () => void }) => (
+const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, onEdit: () => void, onDelete: () => void }) => {
+    // Handle both component and string icon types
+    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
+
+    return (
     <Card>
         <CardContent className="p-4 flex items-center space-x-4">
-            <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", tag.bgColor)}>
-                <tag.icon className={cn("h-6 w-6", tag.textColor)} />
+             <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", tag.bgColor)}>
+                {IconComponent && <IconComponent className={cn("h-6 w-6", tag.textColor)} />}
             </div>
             <div className="flex-1">
                 <div className="flex justify-between items-center">
@@ -60,7 +65,8 @@ const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, on
             </div>
         </CardContent>
     </Card>
-);
+    )
+};
 
 
 export default function TagsPage() {

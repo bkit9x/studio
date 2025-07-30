@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Wallet } from 'lucide-react';
+import { Calendar as CalendarIcon, Wallet, type LucideIcon, icons } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,6 +34,27 @@ const transactionSchema = z.object({
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
+
+const TagButton = ({ tag, isSelected, onClick }: { tag: Tag, isSelected: boolean, onClick: () => void }) => {
+    const IconComponent = typeof tag.icon === 'string' ? icons[tag.icon as keyof typeof icons] : tag.icon as LucideIcon;
+
+    return (
+         <button 
+          key={tag.id} 
+          type="button"
+          onClick={onClick} 
+          className={cn(
+            "flex flex-col items-center justify-center space-y-1 p-2 border rounded-lg w-20 h-20 flex-shrink-0 transition-all", 
+            isSelected ? 'border-primary ring-2 ring-primary bg-primary/10' : 'border-border'
+          )}
+        >
+            <div className={cn("flex items-center justify-center h-8 w-8 rounded-full", tag.bgColor)}>
+              {IconComponent && <IconComponent className={cn("w-5 h-5", tag.textColor)} />}
+            </div>
+            <span className="text-xs text-center">{tag.name}</span>
+        </button>
+    )
+}
 
 export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (isOpen: boolean) => void; }) {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
@@ -212,20 +233,12 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                         {tags
                           .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
                           .map(tag => (
-                            <button 
-                              key={tag.id} 
-                              type="button"
-                              onClick={() => field.onChange(tag.id)} 
-                              className={cn(
-                                "flex flex-col items-center justify-center space-y-1 p-2 border rounded-lg w-20 h-20 flex-shrink-0 transition-all", 
-                                field.value === tag.id ? 'border-primary ring-2 ring-primary bg-primary/10' : 'border-border'
-                              )}
-                            >
-                                <div className={cn("flex items-center justify-center h-8 w-8 rounded-full", tag.bgColor)}>
-                                  <tag.icon className={cn("w-5 h-5", tag.textColor)} />
-                                </div>
-                                <span className="text-xs text-center">{tag.name}</span>
-                            </button>
+                            <TagButton 
+                                key={tag.id}
+                                tag={tag}
+                                isSelected={field.value === tag.id}
+                                onClick={() => field.onChange(tag.id)}
+                            />
                         ))}
                      </div>
                      <ScrollBar orientation="horizontal" />
