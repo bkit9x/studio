@@ -152,7 +152,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange }: { isOpen: boolean;
                 <FormItem>
                   <FormLabel>Số tiền</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="0" className="text-xl h-14 font-bold text-right" />
+                    <Input {...field} type="number" placeholder="0" className="text-lg h-14 font-bold text-right" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

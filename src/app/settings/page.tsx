@@ -109,7 +109,7 @@ export default function SettingsPage() {
   return (
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
       <div>
-        <h1 className="text-2xl font-bold">Cài đặt</h1>
+        <h1 className="text-xl font-bold">Cài đặt</h1>
         <p className="text-muted-foreground">Quản lý tài khoản và tuỳ chỉnh ứng dụng.</p>
       </div>
 

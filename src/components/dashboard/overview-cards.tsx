@@ -45,7 +45,7 @@ export function OverviewCards({ balance, totalIncome, totalExpense, wallets, sel
                     <ArrowUp className="h-4 w-4 text-[hsl(var(--chart-2))]" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-[hsl(var(--chart-2))]">{formatCurrency(totalIncome)}</div>
+                    <div className="text-xl font-bold text-[hsl(var(--chart-2))]">{formatCurrency(totalIncome)}</div>
                 </CardContent>
             </Card>
             <Card className="bg-[hsl(var(--destructive)/0.05)] dark:bg-[hsl(var(--destructive)/0.2)] border-[hsl(var(--destructive)/0.2)]">
@@ -54,7 +54,7 @@ export function OverviewCards({ balance, totalIncome, totalExpense, wallets, sel
                     <ArrowDown className="h-4 w-4 text-[hsl(var(--destructive))]" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-[hsl(var(--destructive))]">{formatCurrency(totalExpense)}</div>
+                    <div className="text-xl font-bold text-[hsl(var(--destructive))]">{formatCurrency(totalExpense)}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -63,7 +63,7 @@ export function OverviewCards({ balance, totalIncome, totalExpense, wallets, sel
                     <Scale className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(balance)}</div>
+                    <div className="text-xl font-bold">{formatCurrency(balance)}</div>
                 </CardContent>
             </Card>
         </div>

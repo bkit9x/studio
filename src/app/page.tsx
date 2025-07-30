@@ -50,7 +50,7 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">FinTrack</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-primary">FinTrack</h1>
         <p className="text-muted-foreground">Chào mừng trở lại!</p>
       </header>
       

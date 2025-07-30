@@ -115,7 +115,7 @@ export default function WalletsPage() {
   return (
     <div className="container mx-auto p-4 space-y-4 pb-28 md:pb-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Quản lý Ví</h1>
+        <h1 className="text-xl font-bold">Quản lý Ví</h1>
         <Button onClick={handleAddWallet}>
             <PlusCircle className="mr-2 h-4 w-4" /> Thêm
         </Button>
