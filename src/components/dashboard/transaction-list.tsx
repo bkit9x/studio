@@ -9,8 +9,20 @@ import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
-import { icons, type LucideIcon } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { icons, type LucideIcon, Trash2, Edit } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+import { AddTransactionSheet } from '@/components/add-transaction-sheet';
 
 const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: Tag | undefined }) => {
     const [isMounted, setIsMounted] = useState(false);
@@ -31,13 +43,13 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
     const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;
 
     return (
-        <div className="flex items-center space-x-4 p-4">
+        <div className="flex items-center space-x-4 p-4 bg-background">
             <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tag.bgColor)}>
                 {IconComponent && <IconComponent className={cn("h-5 w-5", tag.textColor)} />}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{transaction.description}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground truncate">
                     {tag.name} {formattedTime && `・ ${formattedTime}`}
                 </p>
             </div>
@@ -48,10 +60,105 @@ const TransactionItem = ({ transaction, tag }: { transaction: Transaction, tag: 
     );
 }
 
+const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction: Transaction, tag: Tag | undefined, onUpdate: () => void, onDelete: () => void }) => {
+    const itemRef = useRef<HTMLDivElement>(null);
+    const [dragX, setDragX] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        setIsDragging(true);
+        itemRef.current?.style.setProperty('transition', 'none');
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (isDragging) {
+            const currentX = e.touches[0].clientX;
+            const newDragX = currentX - (itemRef.current?.getBoundingClientRect().left ?? 0);
+            // Limit swipe to one direction at a time and prevent swiping too far
+             if (newDragX < -150) {
+                setDragX(-150);
+            } else if (newDragX > 150) {
+                setDragX(150);
+            } else {
+                setDragX(newDragX);
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        itemRef.current?.style.removeProperty('transition');
+        
+        if (dragX < -80) { // Swipe left threshold
+            onUpdate();
+        } else if (dragX > 80) { // Swipe right threshold
+            onDelete();
+        }
+        
+        // Reset position smoothly
+        setDragX(0);
+    };
+
+    const isIncome = transaction.type === 'income';
+
+    return (
+        <div className="relative overflow-hidden">
+             <div className="absolute inset-y-0 left-0 flex items-center justify-start bg-blue-500 text-white w-2/3" style={{ transform: `translateX(${Math.max(0, dragX) - 80}px)`}}>
+                <div className="flex items-center px-6">
+                    <Trash2 className="h-5 w-5 mr-2" />
+                    <span>Xóa</span>
+                </div>
+            </div>
+            <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-orange-500 text-white w-2/3" style={{ transform: `translateX(${Math.min(0, dragX) + 80}px)`}}>
+                <div className="flex items-center px-6">
+                    <Edit className="h-5 w-5 mr-2" />
+                    <span>Sửa</span>
+                </div>
+            </div>
+            <div
+                ref={itemRef}
+                className="w-full relative z-10"
+                style={{ transform: `translateX(${dragX}px)`, transition: 'transform 0.3s ease' }}
+                onTouchStart={!isIncome ? handleTouchStart : undefined}
+                onTouchMove={!isIncome ? handleTouchMove : undefined}
+                onTouchEnd={!isIncome ? handleTouchEnd : undefined}
+            >
+                <TransactionItem transaction={transaction} tag={tag} />
+            </div>
+        </div>
+    );
+};
+
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
     const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
+    const [allTransactions, setAllTransactions] = useLocalStorage<Transaction[]>("transactions", []);
+    
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [transactionToUpdate, setTransactionToUpdate] = useState<Transaction | undefined>(undefined);
+    const { toast } = useToast();
 
     const getTagById = (id: string) => tags.find(t => t.id === id);
+
+    const handleUpdateRequest = (tx: Transaction) => {
+        setTransactionToUpdate(tx);
+        setIsSheetOpen(true);
+    };
+
+    const handleDeleteRequest = (id: string) => {
+        setTransactionToDelete(id);
+        setIsAlertOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (transactionToDelete) {
+            setAllTransactions(allTransactions.filter(t => t.id !== transactionToDelete));
+            toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
+        }
+        setIsAlertOpen(false);
+        setTransactionToDelete(null);
+    };
 
     const groupedTransactions = transactions.reduce((acc, tx) => {
         const dateKey = format(new Date(tx.createdAt), 'yyyy-MM-dd');
@@ -84,14 +191,42 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                 <div key={date}>
                     <h3 className="text-sm font-medium text-muted-foreground px-2 py-1">{formatDateHeading(date)}</h3>
                     <Card>
-                        <CardContent className="divide-y p-0">
+                        <CardContent className="divide-y p-0 overflow-hidden">
                            {groupedTransactions[date]
                             .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                            .map(tx => <TransactionItem key={tx.id} transaction={tx} tag={getTagById(tx.tagId)} />)}
+                            .map(tx => (
+                                <SwipeableTransactionItem 
+                                    key={tx.id} 
+                                    transaction={tx} 
+                                    tag={getTagById(tx.tagId)}
+                                    onUpdate={() => handleUpdateRequest(tx)}
+                                    onDelete={() => handleDeleteRequest(tx.id)}
+                                />
+                            ))}
                         </CardContent>
                     </Card>
                 </div>
             ))}
+             <AddTransactionSheet 
+                isOpen={isSheetOpen} 
+                onOpenChange={setIsSheetOpen} 
+                transaction={transactionToUpdate}
+            />
+            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Hành động này không thể được hoàn tác. Giao dịch sẽ bị xóa vĩnh viễn.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm}>Xóa</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
+
