@@ -30,7 +30,7 @@ const spendingIcons = [
   'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
   'Plane', 'Film', 'Music', 'BookOpen', 'Gamepad2', 'Briefcase', 'Coffee', 'Pizza',
   'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
-  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake', 'Bone',
+  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake',
   'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
 ] as const;
 
@@ -152,7 +152,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col p-0">
+      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{tag ? 'Chỉnh sửa hạng mục' : 'Thêm hạng mục mới'}</SheetTitle>
           <SheetDescription>
@@ -209,7 +209,8 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
                     <SelectContent>
                         <ScrollArea className="h-72">
                          {iconNames.map((iconName) => {
-                            const IconComponent = icons[iconName];
+                            const IconComponent = icons[iconName as keyof typeof icons];
+                            if (!IconComponent) return null;
                             return (
                                 <SelectItem key={iconName} value={iconName}>
                                     <div className="flex items-center gap-2">
