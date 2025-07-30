@@ -156,6 +156,16 @@ export default function SettingsPage() {
             </SettingsItem>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Thông tin</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y">
+          <p>FinTrack -  Ứng dụng quản lý chi tiêu cá nhân thông minh.
+           Phát triển bởi <b className="text-primary">Hoàng Kha</b> - <a href="mailto:hkhadev@gmail.com" title="hkhadev@gmail.com" rel="noopener noreferrer" target="_blank">hkhadev@gmail.com</a></p>
+        </CardContent>
+      </Card>
       
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
