@@ -66,7 +66,7 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
             <div className={cn("font-bold text-right", isIncome ? "text-[hsl(var(--chart-2))]" : "text-destructive")}>
                 {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
             </div>
-            {!isMobile && !isIncome && (
+            {!isMobile && (
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -129,7 +129,7 @@ const SwipeableTransactionItem = ({ transaction, tag, onUpdate, onDelete }: { tr
     
     const isIncome = transaction.type === 'income';
 
-    if (!isMobile || isIncome) {
+    if (!isMobile) {
         return <TransactionItem transaction={transaction} tag={tag} onUpdate={onUpdate} onDelete={onDelete} />
     }
 
@@ -261,3 +261,5 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         </div>
     );
 }
+
+    
