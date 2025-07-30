@@ -44,6 +44,7 @@ const tagSchema = z.object({
   name: z.string().min(1, { message: 'Tên hạng mục không được để trống.' }),
   icon: z.string().min(1, { message: 'Vui lòng chọn một biểu tượng.' }),
   colorIndex: z.coerce.number().min(0).max(colors.length - 1),
+  limit: z.coerce.number().min(0, { message: 'Hạn mức phải là số không âm.' }).optional(),
 });
 
 type TagFormValues = z.infer<typeof tagSchema>;
@@ -64,6 +65,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         name: '',
         icon: 'ShoppingCart',
         colorIndex: 0,
+        limit: 0,
     }
   });
 
@@ -75,12 +77,14 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
                 name: tag.name,
                 icon: tag.icon,
                 colorIndex: colorIndex !== -1 ? colorIndex : 0,
+                limit: tag.limit ?? 0,
             });
         } else {
             form.reset({
                 name: '',
                 icon: 'ShoppingCart',
                 colorIndex: 0,
+                limit: 0,
             });
         }
     }
@@ -94,6 +98,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         icon: data.icon as keyof typeof icons,
         textColor: selectedColor.textColor,
         bgColor: selectedColor.bgColor,
+        limit: data.limit || undefined, // Store as undefined if 0 or empty
     };
     
     if(tag) {
@@ -110,6 +115,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
             icon: newTagData.icon,
             textColor: newTagData.textColor,
             bgColor: newTagData.bgColor,
+            limit: newTagData.limit,
         };
         setTags([...tags, newTag]);
         toast({
@@ -158,6 +164,20 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+                control={form.control}
+                name="limit"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Hạn mức chi tiêu hàng tháng (Tùy chọn)</FormLabel>
+                    <FormControl>
+                    <Input {...field} type="number" placeholder="0" />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
             />
             
             <FormField

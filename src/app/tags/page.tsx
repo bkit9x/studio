@@ -4,14 +4,15 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreVertical, Edit, Trash2, type LucideIcon } from "lucide-react";
+import { PlusCircle, MoreVertical, Edit, Trash2, type LucideIcon, AlertTriangle } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { mockTags, mockTransactions } from "@/data/mock-data";
+import { mockTags } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import type { Tag, Transaction } from "@/lib/types";
 import { TagFormSheet } from "@/components/tags/tag-form-sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,23 +25,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { icons } from 'lucide-react';
+import { getMonth, getYear } from "date-fns";
 
 
 const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, onEdit: () => void, onDelete: () => void }) => {
     const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
+    const progress = tag.limit && tag.limit > 0 ? (spent / tag.limit) * 100 : 0;
+    const isExceeded = progress > 100;
 
     return (
     <Card>
-        <CardContent className="p-4 flex items-center space-x-4">
-             <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", tag.bgColor)}>
-                {IconComponent ? <IconComponent className={cn("h-6 w-6", tag.textColor)} /> : null}
-            </div>
-            <div className="flex-1">
-                <div className="flex justify-between items-center">
-                    <p className="font-bold">{tag.name}</p>
-                    <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-destructive">{formatCurrency(spent)}</p>
-                         <DropdownMenu>
+        <CardContent className="p-4">
+            <div className="flex items-center space-x-4">
+                <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", tag.bgColor)}>
+                    {IconComponent ? <IconComponent className={cn("h-6 w-6", tag.textColor)} /> : null}
+                </div>
+                <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                        <p className="font-bold">{tag.name}</p>
+                        <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <MoreVertical className="h-4 w-4" />
@@ -60,8 +63,29 @@ const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, on
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
+                     <p className={cn(
+                        "text-sm font-medium",
+                        isExceeded ? "text-destructive" : "text-muted-foreground"
+                    )}>
+                        Đã chi: {formatCurrency(spent)}
+                        {tag.limit && ` / ${formatCurrency(tag.limit)}`}
+                    </p>
                 </div>
             </div>
+            {tag.limit && tag.limit > 0 && tag.name !== 'Thu nhập' &&(
+                <div className="mt-4">
+                   <Progress value={progress} className={cn(
+                       "h-2",
+                       isExceeded && "[&>div]:bg-destructive"
+                   )} />
+                    {isExceeded && (
+                        <div className="flex items-center text-xs mt-1 text-destructive">
+                            <AlertTriangle className="h-3 w-3 mr-1"/>
+                            <span>Vượt hạn mức!</span>
+                        </div>
+                    )}
+                </div>
+            )}
         </CardContent>
     </Card>
     )
@@ -112,10 +136,21 @@ export default function TagsPage() {
     setIsAlertOpen(false);
     setTagToDelete(null);
   }
-
-  const getSpentAmount = (tagId: string) => {
+  
+  const getMonthlySpentAmount = (tagId: string) => {
+    const currentMonth = getMonth(new Date());
+    const currentYear = getYear(new Date());
+    
     return transactions
-        .filter(t => t.tagId === tagId && t.type === 'expense')
+        .filter(t => {
+            const transactionDate = new Date(t.createdAt);
+            return (
+                t.tagId === tagId && 
+                t.type === 'expense' &&
+                getMonth(transactionDate) === currentMonth &&
+                getYear(transactionDate) === currentYear
+            )
+        })
         .reduce((sum, t) => sum + t.amount, 0);
   }
 
@@ -127,13 +162,27 @@ export default function TagsPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Thêm Hạng mục
         </Button>
       </div>
-      <p className="text-muted-foreground">Tạo và quản lý các hạng mục chi tiêu và thu nhập.</p>
+      <p className="text-muted-foreground">Tạo, quản lý và đặt hạn mức chi tiêu cho các hạng mục.</p>
       <div className="space-y-4">
-        {tags.map(tag => (
+        {tags
+            .filter(t => t.name !== 'Thu nhập')
+            .map(tag => (
             <TagItem 
                 key={tag.id} 
                 tag={tag} 
-                spent={getSpentAmount(tag.id)} 
+                spent={getMonthlySpentAmount(tag.id)} 
+                onEdit={() => handleEditTag(tag)}
+                onDelete={() => handleDeleteRequest(tag.id)}
+            />
+        ))}
+         <h2 className="text-xl font-bold pt-4">Hạng mục Thu nhập</h2>
+         {tags
+            .filter(t => t.name === 'Thu nhập')
+            .map(tag => (
+             <TagItem 
+                key={tag.id} 
+                tag={tag} 
+                spent={0}
                 onEdit={() => handleEditTag(tag)}
                 onDelete={() => handleDeleteRequest(tag.id)}
             />

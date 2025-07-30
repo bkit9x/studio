@@ -14,6 +14,7 @@ export type Tag = {
   icon: keyof typeof icons;
   textColor: string;
   bgColor: string;
+  limit?: number; // Monthly spending limit
 };
 
 export type TransactionType = 'income' | 'expense';
