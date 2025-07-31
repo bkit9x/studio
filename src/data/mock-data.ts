@@ -5,7 +5,7 @@ export const mockTags: Tag[] = [
   { id: '1', name: 'Mua sắm', icon: 'ShoppingCart', textColor: 'text-blue-500', bgColor: 'bg-blue-100', limit: 2000000 },
   { id: '2', name: 'Đi lại', icon: 'Car', textColor: 'text-orange-500', bgColor: 'bg-orange-100', limit: 500000 },
   { id: '3', name: 'Ăn uống', icon: 'Utensils', textColor: 'text-red-500', bgColor: 'bg-red-100', limit: 3000000 },
-  { id: '4', name: 'Nhà cửa', icon: 'Home', textColor: 'text-green-500', bgColor: 'bg-green-100', limit: 2500000 },
+  { id: '4', name: 'Nhà cửa', icon: 'ShoppingCart', textColor: 'text-green-500', bgColor: 'bg-green-100', limit: 2500000 },
   { id: '5', name: 'Quần áo', icon: 'Shirt', textColor: 'text-purple-500', bgColor: 'bg-purple-100' },
   { id: '6', name: 'Sức khỏe', icon: 'HeartPulse', textColor: 'text-pink-500', bgColor: 'bg-pink-100' },
   { id: '7', name: 'Thu nhập', icon: 'Plus', textColor: 'text-teal-500', bgColor: 'bg-teal-100' },

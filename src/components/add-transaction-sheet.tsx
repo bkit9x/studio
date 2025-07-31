@@ -66,7 +66,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [wallets] = useLocalStorage<WalletType[]>("wallets", mockWallets);
   const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
-  const [selectedWalletId] = useLocalStorage<string | undefined>("selectedWalletId");
+  const [selectedWalletId] = useLocalStorage<string | undefined>("selectedWalletId", wallets[0]?.id);
   const { toast } = useToast();
 
   const isEditMode = !!transaction;
