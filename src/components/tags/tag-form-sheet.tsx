@@ -28,7 +28,7 @@ import {
 
 const spendingIcons = [
   'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
-  'Plane', 'Film', 'Music', 'BookOpen', 'Gamepad2', 'Briefcase', 'Coffee', 'Pizza',
+  'Plane', 'House', 'PiggyBank', 'ArrowRightLeft', 'BanknoteArrowUp', 'BanknoteArrowDown', 'Coffee', 'Pizza',
   'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
   'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake',
   'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
