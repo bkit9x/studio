@@ -3,5 +3,5 @@ export const formatCurrency = (amount: number, currency = 'VND') => {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount).replace('₫','k');
 };
