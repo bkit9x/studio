@@ -27,4 +27,5 @@ export type Transaction = {
   amount: number;
   description: string;
   createdAt: Date | string; // Allow string for serialization
+  sourceWalletId?: string;
 };

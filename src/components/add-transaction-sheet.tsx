@@ -31,6 +31,7 @@ const transactionSchema = z.object({
   tagId: z.string({ required_error: 'Vui lòng chọn một hạng mục.' }),
   walletId: z.string({ required_error: 'Vui lòng chọn một ví.' }),
   createdAt: z.date(),
+  sourceWalletId: z.string().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -85,6 +86,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 createdAt: new Date(transaction.createdAt),
                 walletId: transaction.walletId,
                 tagId: transaction.tagId,
+                sourceWalletId: transaction.sourceWalletId,
             });
         } else {
             form.reset({
@@ -93,7 +95,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 description: '',
                 createdAt: new Date(),
                 walletId: selectedWalletId || wallets[0]?.id,
-                tagId: undefined
+                tagId: undefined,
+                sourceWalletId: undefined,
             });
         }
     }
@@ -114,16 +117,58 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
             description: "Đã cập nhật giao dịch.",
         });
     } else {
-        const newTransaction: Transaction = {
-          id: crypto.randomUUID(),
-          ...data,
-          createdAt: data.createdAt.toISOString(), // Store as ISO string
-        };
-        setTransactions([newTransaction, ...transactions]);
-        toast({
-          title: "Thành công!",
-          description: "Đã thêm giao dịch mới.",
-        });
+        if (data.type === 'income' && data.sourceWalletId && data.sourceWalletId !== data.walletId) {
+            // Transfer between wallets
+            const sourceWallet = wallets.find(w => w.id === data.sourceWalletId);
+            const destinationWallet = wallets.find(w => w.id === data.walletId);
+            const transferTag = tags.find(t => t.name === 'Chuyển khoản') || tags[0];
+
+            if (!sourceWallet || !destinationWallet) {
+                toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy ví.' });
+                return;
+            }
+
+            const expenseTransaction: Transaction = {
+                id: crypto.randomUUID(),
+                type: 'expense',
+                amount: data.amount,
+                description: `Chuyển tiền đến ${destinationWallet.name}`,
+                tagId: transferTag.id,
+                walletId: sourceWallet.id,
+                createdAt: data.createdAt.toISOString(),
+                sourceWalletId: data.sourceWalletId,
+            };
+
+            const incomeTransaction: Transaction = {
+                id: crypto.randomUUID(),
+                type: 'income',
+                amount: data.amount,
+                description: `Nhận tiền từ ${sourceWallet.name}`,
+                tagId: data.tagId,
+                walletId: data.walletId,
+                createdAt: data.createdAt.toISOString(),
+                sourceWalletId: data.sourceWalletId,
+            };
+            
+            setTransactions([expenseTransaction, incomeTransaction, ...transactions]);
+            toast({
+                title: "Thành công!",
+                description: "Đã tạo giao dịch chuyển tiền.",
+            });
+
+        } else {
+            // Regular income/expense
+            const newTransaction: Transaction = {
+              id: crypto.randomUUID(),
+              ...data,
+              createdAt: data.createdAt.toISOString(),
+            };
+            setTransactions([newTransaction, ...transactions]);
+            toast({
+              title: "Thành công!",
+              description: "Đã thêm giao dịch mới.",
+            });
+        }
     }
     onOpenChange(false);
   }
@@ -177,7 +222,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 <FormItem>
                   <FormLabel>Số tiền</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="0" className="text-lg h-14 font-bold text-right" />
+                    <Input {...field} type="number" placeholder="0" className="text-xl h-14 font-bold text-right" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -185,12 +230,12 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
             />
             
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+               <FormField
                 control={form.control}
                 name="walletId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ví</FormLabel>
+                    <FormLabel>{transactionType === 'income' ? 'Đến ví' : 'Từ ví'}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -208,7 +253,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
                 control={form.control}
                 name="createdAt"
                 render={({ field }) => (
@@ -232,6 +277,34 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 )}
               />
             </div>
+            
+            {transactionType === 'income' && !isEditMode && (
+                 <FormField
+                    control={form.control}
+                    name="sourceWalletId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Từ ví (Tùy chọn)</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <Wallet className="mr-2 h-4 w-4" />
+                            <SelectValue placeholder="Chuyển tiền từ ví..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="none">Không chọn</SelectItem>
+                            {wallets.filter(w => w.id !== form.getValues('walletId')).map(wallet => (
+                                <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
+
 
             <FormField
               control={form.control}
