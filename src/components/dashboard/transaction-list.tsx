@@ -57,7 +57,7 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
             </div>
             <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{transaction.description}</p>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground truncate">
                     {tag.name} {formattedTime && `・ ${formattedTime}`}
                 </p>
             </div>
