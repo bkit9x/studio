@@ -75,11 +75,11 @@ export default function SettingsPage() {
 
         // Simple validation
         if (importedData.wallets && importedData.tags && importedData.transactions) {
-          // Append data - simple merge, could be more sophisticated
-          setWallets([...wallets, ...importedData.wallets]);
-          setTags([...tags, ...importedData.tags]);
-          setTransactions([...transactions, ...importedData.transactions]);
-          toast({ title: "Thành công!", description: "Dữ liệu đã được nhập." });
+          // Replace old data with imported data
+          setWallets(importedData.wallets);
+          setTags(importedData.tags);
+          setTransactions(importedData.transactions);
+          toast({ title: "Thành công!", description: "Dữ liệu đã được nhập và thay thế hoàn toàn." });
         } else {
           throw new Error("Invalid data format.");
         }

@@ -51,7 +51,7 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
     const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;
 
     return (
-        <div className="flex items-center space-x-4 p-4 bg-background">
+        <div className="flex items-center space-x-4 p-4 bg-white">
             <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tag.bgColor)}>
                 {IconComponent && <IconComponent className={cn("h-5 w-5", tag.textColor)} />}
             </div>
