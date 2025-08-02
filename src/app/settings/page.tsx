@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, CloudSync } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +19,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { mockWallets, mockTags, mockTransactions } from "@/data/mock-data";
+import { SyncDialog } from "@/components/settings/sync-dialog";
 
 
 const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => (
@@ -35,6 +36,7 @@ const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClic
 
 export default function SettingsPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isSyncOpen, setIsSyncOpen] = useState(false);
   const { toast } = useToast();
 
   const [wallets, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
@@ -107,6 +109,7 @@ export default function SettingsPage() {
 
 
   return (
+    <>
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
       <div>
         <h1 className="text-xl font-bold">Cài đặt</h1>
@@ -141,6 +144,10 @@ export default function SettingsPage() {
             <CardTitle>Dữ liệu</CardTitle>
         </CardHeader>
         <CardContent className="divide-y p-0">
+            <SettingsItem onClick={() => setIsSyncOpen(true)}>
+                <CloudSync className="h-5 w-5 text-muted-foreground" />
+                <span>Đồng bộ hóa</span>
+            </SettingsItem>
             <SettingsItem onClick={handleExport}>
                 <Download className="h-5 w-5 text-muted-foreground" />
                 <span>Xuất dữ liệu</span>
@@ -186,5 +193,7 @@ export default function SettingsPage() {
       </AlertDialog>
 
     </div>
+    <SyncDialog isOpen={isSyncOpen} onOpenChange={setIsSyncOpen} />
+    </>
   );
 }
