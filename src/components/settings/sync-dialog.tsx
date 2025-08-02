@@ -2,7 +2,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@radix-ui/resolvers/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Dialog,
