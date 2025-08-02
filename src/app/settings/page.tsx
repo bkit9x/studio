@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, CloudSync } from "lucide-react";
+import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, Cloud } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,14 +39,14 @@ export default function SettingsPage() {
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const { toast } = useToast();
 
-  const [wallets, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
-  const [tags, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
+  const [, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
+  const [, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
 
   const handleExport = () => {
     const dataToExport = {
-      wallets,
-      tags,
+      wallets: JSON.parse(localStorage.getItem('wallets') || '[]'),
+      tags: JSON.parse(localStorage.getItem('tags') || '[]'),
       transactions,
     };
     const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -75,9 +75,7 @@ export default function SettingsPage() {
         }
         const importedData = JSON.parse(text);
 
-        // Simple validation
         if (importedData.wallets && importedData.tags && importedData.transactions) {
-          // Replace old data with imported data
           setWallets(importedData.wallets);
           setTags(importedData.tags);
           setTransactions(importedData.transactions);
@@ -91,7 +89,6 @@ export default function SettingsPage() {
       }
     };
     reader.readAsText(file);
-    // Reset file input to allow importing the same file again
     event.target.value = '';
   };
   
@@ -118,7 +115,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>Tài khoản</CardTitle>
+            <CardTitle className="text-xl">Tài khoản</CardTitle>
             <CardDescription>user@example.com</CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,7 +127,7 @@ export default function SettingsPage() {
       
       <Card>
         <CardHeader>
-            <CardTitle>Tuỳ chỉnh</CardTitle>
+            <CardTitle className="text-xl">Tuỳ chỉnh</CardTitle>
         </CardHeader>
         <CardContent className="divide-y p-0">
             <SettingsItem><span>Ngôn ngữ</span></SettingsItem>
@@ -141,11 +138,11 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>Dữ liệu</CardTitle>
+            <CardTitle className="text-xl">Dữ liệu</CardTitle>
         </CardHeader>
         <CardContent className="divide-y p-0">
             <SettingsItem onClick={() => setIsSyncOpen(true)}>
-                <CloudSync className="h-5 w-5 text-muted-foreground" />
+                <Cloud className="h-5 w-5 text-muted-foreground" />
                 <span>Đồng bộ hóa</span>
             </SettingsItem>
             <SettingsItem onClick={handleExport}>
@@ -166,7 +163,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>Thông tin</CardTitle>
+            <CardTitle className="text-xl">Thông tin</CardTitle>
         </CardHeader>
         <CardContent className="divide-y">
           <p>FinTrack -  Ứng dụng quản lý chi tiêu cá nhân thông minh.
