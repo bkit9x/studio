@@ -2,7 +2,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@radix-ui/resolvers/zod";
 import { z } from "zod";
 import {
   Dialog,
@@ -25,6 +25,10 @@ import {
 import { useSync } from "@/hooks/use-sync";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { formatRelative } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
 
 const syncSchema = z.object({
   apiKey: z.string().min(1, { message: "API Key không được để trống." }),
@@ -40,7 +44,7 @@ interface SyncDialogProps {
 }
 
 export function SyncDialog({ isOpen, onOpenChange }: SyncDialogProps) {
-  const { config, setConfig, syncData, isLoading, isSyncing } = useSync();
+  const { config, setConfig, syncData, isLoading, isSyncing, lastSync, hasUnsyncedChanges } = useSync();
   const { toast } = useToast();
 
   const form = useForm<SyncFormValues>({
@@ -74,6 +78,16 @@ export function SyncDialog({ isOpen, onOpenChange }: SyncDialogProps) {
         toast({ variant: "destructive", title: "Lỗi đồng bộ", description: error.message });
       });
   };
+
+  const formatLastSync = (date: Date | null) => {
+    if (!date) return "Chưa từng đồng bộ.";
+    try {
+        return `Lần cuối: ${formatRelative(date, new Date(), { locale: vi })}`;
+    } catch {
+        return "Thời gian không hợp lệ";
+    }
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -125,6 +139,18 @@ export function SyncDialog({ isOpen, onOpenChange }: SyncDialogProps) {
                 </FormItem>
               )}
             />
+            <div className="text-sm text-muted-foreground space-y-1">
+                <p>{formatLastSync(lastSync)}</p>
+                <div className="flex items-center gap-2">
+                    <span>Trạng thái:</span>
+                    <span className={cn(
+                        "font-medium",
+                        hasUnsyncedChanges ? "text-orange-500" : "text-green-500"
+                    )}>
+                        {hasUnsyncedChanges ? "Có thay đổi chưa đồng bộ" : "Đã đồng bộ"}
+                    </span>
+                </div>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Hủy
