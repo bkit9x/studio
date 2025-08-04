@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, Cloud } from "lucide-react";
+import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, Cloud, FileJson, FileText } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
@@ -22,28 +28,31 @@ import { mockWallets, mockTags, mockTransactions } from "@/data/mock-data";
 import { SyncDialog } from "@/components/settings/sync-dialog";
 
 
-const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => (
-    <div 
+const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
+    const Comp = asChild ? 'div' : 'div';
+    return (
+    <Comp
       className="flex items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer"
       onClick={onClick}
     >
         <div className="flex items-center gap-3">
          {children}
         </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </div>
-)
+        {!asChild && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+    </Comp>
+    )
+}
 
 export default function SettingsPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const { toast } = useToast();
 
-  const [, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
-  const [, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
+  const [wallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
+  const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
+  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
 
-  const handleExport = () => {
+  const handleExportJSON = () => {
     const dataToExport = {
       wallets: JSON.parse(localStorage.getItem('wallets') || '[]'),
       tags: JSON.parse(localStorage.getItem('tags') || '[]'),
@@ -59,8 +68,49 @@ export default function SettingsPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast({ title: "Thành công!", description: "Dữ liệu đã được xuất." });
+    toast({ title: "Thành công!", description: "Dữ liệu JSON đã được xuất." });
   };
+  
+  const handleExportCSV = () => {
+    if (transactions.length === 0) {
+        toast({ variant: 'destructive', title: "Không có dữ liệu", description: "Không có giao dịch nào để xuất." });
+        return;
+    }
+    
+    const walletsMap = new Map(wallets.map(w => [w.id, w.name]));
+    const tagsMap = new Map(tags.map(t => [t.id, t.name]));
+
+    const headers = ['ID', 'Ngày', 'Mô tả', 'Số tiền', 'Loại', 'Hạng mục', 'Ví'];
+    const csvRows = [headers.join(',')];
+    
+    // Helper to escape CSV fields
+    const escapeCsvField = (field: string) => `"${String(field).replace(/"/g, '""')}"`;
+
+    for (const tx of transactions) {
+        const row = [
+            escapeCsvField(tx.id),
+            escapeCsvField(new Date(tx.createdAt).toISOString()),
+            escapeCsvField(tx.description),
+            String(tx.amount),
+            escapeCsvField(tx.type === 'income' ? 'Thu' : 'Chi'),
+            escapeCsvField(tagsMap.get(tx.tagId) || 'Không rõ'),
+            escapeCsvField(walletsMap.get(tx.walletId) || 'Không rõ'),
+        ];
+        csvRows.push(row.join(','));
+    }
+    
+    const csvString = csvRows.join('\n');
+    const dataBlob = new Blob([`\uFEFF${csvString}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fintrack_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Thành công!", description: "Dữ liệu CSV đã được xuất." });
+  }
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -73,6 +123,12 @@ export default function SettingsPage() {
         if (typeof text !== 'string') {
           throw new Error("File could not be read");
         }
+        
+        // Xóa dữ liệu cũ
+        setWallets([]);
+        setTags([]);
+        setTransactions([]);
+        
         const importedData = JSON.parse(text);
 
         if (importedData.wallets && importedData.tags && importedData.transactions) {
@@ -145,10 +201,26 @@ export default function SettingsPage() {
                 <Cloud className="h-5 w-5 text-muted-foreground" />
                 <span>Đồng bộ hóa</span>
             </SettingsItem>
-            <SettingsItem onClick={handleExport}>
-                <Download className="h-5 w-5 text-muted-foreground" />
-                <span>Xuất dữ liệu</span>
-            </SettingsItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SettingsItem asChild>
+                  <Download className="h-5 w-5 text-muted-foreground" />
+                  <span>Xuất dữ liệu</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />
+                </SettingsItem>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportJSON}>
+                      <FileJson className="mr-2 h-4 w-4" />
+                      <span>Xuất ra JSON</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCSV}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Xuất ra CSV/Excel</span>
+                  </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <SettingsItem onClick={triggerImport}>
                  <Upload className="h-5 w-5 text-muted-foreground" />
                 <span>Nhập dữ liệu</span>
