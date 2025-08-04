@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect } from 'react';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Wallet, type LucideIcon, icons } from 'lucide-react';
+import { format, addDays, subDays } from 'date-fns';
+import { Calendar as CalendarIcon, Wallet, type LucideIcon, icons, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -125,7 +125,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
             description: "Đã cập nhật giao dịch.",
         });
     } else {
-        if (data.type === 'income' && data.sourceWalletId && data.sourceWalletId !== data.walletId) {
+        if (data.type === 'income' && data.sourceWalletId && data.sourceWalletId !== 'none' && data.sourceWalletId !== data.walletId) {
             // Transfer between wallets
             const sourceWallet = wallets.find(w => w.id === data.sourceWalletId);
             const destinationWallet = wallets.find(w => w.id === data.walletId);
@@ -199,6 +199,11 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
   };
   
   const transactionType = form.watch('type');
+  const handleDateChange = (days: number) => {
+    const currentDate = form.getValues('createdAt');
+    const newDate = days > 0 ? addDays(currentDate, days) : subDays(currentDate, -days);
+    form.setValue('createdAt', newDate, { shouldDirty: true, shouldValidate: true });
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -254,6 +259,20 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mô tả</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="VD: Ăn trưa" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
                <FormField
                 control={form.control}
@@ -284,19 +303,27 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ngày</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "dd/MM/yy") : <span>Chọn ngày</span>}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                      </PopoverContent>
-                    </Popover>
+                     <div className="flex items-center gap-1">
+                      <Button size="icon" variant="outline" type="button" onClick={() => handleDateChange(-1)}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "dd/MM/yy") : <span>Chọn ngày</span>}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <Button size="icon" variant="outline" type="button" onClick={() => handleDateChange(1)}>
+                          <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -329,21 +356,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                     )}
                 />
             )}
-
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="VD: Ăn trưa" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}
