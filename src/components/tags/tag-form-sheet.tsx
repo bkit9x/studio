@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,6 +69,7 @@ interface TagFormSheetProps {
 export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
   const [tags, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
   const { toast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<TagFormValues>({
     resolver: zodResolver(tagSchema),
@@ -82,6 +83,11 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
   useEffect(() => {
     if (isOpen) {
+        // Prevent keyboard from popping up on mobile
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+
         if (tag) {
             const colorIndex = colors.findIndex(c => c.bgColor === tag.bgColor);
             form.reset({
@@ -161,7 +167,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         </SheetHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4 pt-4">
+          <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4 pt-4">
 
             <FormField
               control={form.control}
