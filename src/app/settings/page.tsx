@@ -28,18 +28,17 @@ import { mockWallets, mockTags, mockTransactions } from "@/data/mock-data";
 import { SyncDialog } from "@/components/settings/sync-dialog";
 
 
-const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
-    const Comp = asChild ? 'div' : 'div';
+const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
     return (
-    <Comp
+    <div
       className="flex items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer"
       onClick={onClick}
     >
         <div className="flex items-center gap-3">
          {children}
         </div>
-        {!asChild && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-    </Comp>
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+    </div>
     )
 }
 
@@ -48,9 +47,9 @@ export default function SettingsPage() {
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const { toast } = useToast();
 
-  const [wallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
-  const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
+  const [wallets, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
+  const [tags, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
 
   const handleExportJSON = () => {
     const dataToExport = {
@@ -84,7 +83,14 @@ export default function SettingsPage() {
     const csvRows = [headers.join(',')];
     
     // Helper to escape CSV fields
-    const escapeCsvField = (field: string) => `"${String(field).replace(/"/g, '""')}"`;
+    const escapeCsvField = (field: string | number) => {
+        let stringField = String(field);
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            stringField = `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+    };
+
 
     for (const tx of transactions) {
         const row = [
@@ -124,11 +130,6 @@ export default function SettingsPage() {
           throw new Error("File could not be read");
         }
         
-        // Xóa dữ liệu cũ
-        setWallets([]);
-        setTags([]);
-        setTransactions([]);
-        
         const importedData = JSON.parse(text);
 
         if (importedData.wallets && importedData.tags && importedData.transactions) {
@@ -153,11 +154,13 @@ export default function SettingsPage() {
   }
 
   const handleResetConfirm = () => {
-    setWallets(mockWallets);
-    setTags(mockTags);
-    setTransactions(mockTransactions);
-    setIsAlertOpen(false);
-    toast({ title: "Thành công!", description: "Dữ liệu đã được reset." });
+    localStorage.removeItem("wallets");
+    localStorage.removeItem("tags");
+    localStorage.removeItem("transactions");
+    localStorage.removeItem("selectedWalletId");
+    localStorage.removeItem(SYNC_CONFIG_KEY);
+    localStorage.removeItem(SYNC_METADATA_KEY);
+    window.location.reload();
   };
 
 
@@ -203,11 +206,13 @@ export default function SettingsPage() {
             </SettingsItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SettingsItem asChild>
-                  <Download className="h-5 w-5 text-muted-foreground" />
-                  <span>Xuất dữ liệu</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />
-                </SettingsItem>
+                <div className="flex items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer">
+                    <div className="flex items-center gap-3">
+                        <Download className="h-5 w-5 text-muted-foreground" />
+                        <span>Xuất dữ liệu</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleExportJSON}>
@@ -251,12 +256,12 @@ export default function SettingsPage() {
                 Bạn có chắc chắn muốn reset?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này không thể được hoàn tác. Toàn bộ dữ liệu của bạn (ví, hạng mục, giao dịch) sẽ bị xóa và thay thế bằng dữ liệu mặc định.
+              Hành động này không thể được hoàn tác. Toàn bộ dữ liệu của bạn sẽ bị xóa vĩnh viễn khỏi thiết bị này.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetConfirm}>Tiếp tục</AlertDialogAction>
+            <AlertDialogAction onClick={handleResetConfirm} className="bg-destructive hover:bg-destructive/90">Tôi hiểu, xóa dữ liệu</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
