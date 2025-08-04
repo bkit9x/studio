@@ -74,6 +74,14 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      type: 'expense',
+      description: '',
+      createdAt: new Date(),
+      walletId: selectedWalletId || wallets[0]?.id,
+      tagId: undefined,
+      sourceWalletId: undefined,
+    }
   });
   
   useEffect(() => {
@@ -91,7 +99,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
         } else {
             form.reset({
                 type: 'expense',
-                amount: 0,
+                amount: undefined, // Default to empty instead of 0
                 description: '',
                 createdAt: new Date(),
                 walletId: selectedWalletId || wallets[0]?.id,
@@ -103,8 +111,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
   }, [isOpen, transaction, isEditMode, selectedWalletId, wallets, form]);
 
 
-  function onSubmit(data: TransactionFormValues) {
-    if (isEditMode && transaction) {
+  const saveTransaction = (data: TransactionFormValues): boolean => {
+     if (isEditMode && transaction) {
         const updatedTransaction: Transaction = {
             ...transaction,
             ...data,
@@ -125,7 +133,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
 
             if (!sourceWallet || !destinationWallet) {
                 toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy ví.' });
-                return;
+                return false;
             }
 
             const expenseTransaction: Transaction = {
@@ -170,9 +178,26 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
             });
         }
     }
-    onOpenChange(false);
+    return true;
   }
 
+  const handleSave = (data: TransactionFormValues) => {
+    if (saveTransaction(data)) {
+        onOpenChange(false);
+    }
+  }
+
+  const handleSaveAndNew = (data: TransactionFormValues) => {
+    if (saveTransaction(data)) {
+        // Reset form but keep some fields
+        form.reset({
+            ...data, // This keeps wallet, tag, date, type
+            amount: undefined,
+            description: '',
+        });
+    }
+  };
+  
   const transactionType = form.watch('type');
 
   return (
@@ -186,7 +211,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
         </SheetHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4">
+          <form className="flex-1 overflow-y-auto px-6 space-y-4">
             <FormField
               control={form.control}
               name="type"
@@ -222,7 +247,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 <FormItem>
                   <FormLabel>Số tiền</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="0" className="text-xl h-14 font-bold text-right" />
+                    <Input {...field} value={field.value ?? ''} type="number" placeholder="0" className="text-xl h-14 font-bold text-right" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -346,8 +371,19 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
               )}
             />
           
-            <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6">
-                <Button type="submit" className="w-full">{isEditMode ? 'Lưu thay đổi' : 'Lưu giao dịch'}</Button>
+            <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6 flex-row gap-2">
+                 {isEditMode ? (
+                     <Button onClick={form.handleSubmit(handleSave)} className="w-full">Lưu thay đổi</Button>
+                 ) : (
+                    <>
+                        <Button type="button" onClick={form.handleSubmit(handleSaveAndNew)} variant="outline" className="w-full">
+                            Lưu & Nhập tiếp
+                        </Button>
+                         <Button type="button" onClick={form.handleSubmit(handleSave)} className="w-full">
+                            Lưu giao dịch
+                        </Button>
+                    </>
+                 )}
             </SheetFooter>
           </form>
         </Form>
@@ -355,3 +391,5 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
     </Sheet>
   );
 }
+
+    
