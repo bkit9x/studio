@@ -3,29 +3,29 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSupabase } from '@/contexts/auth-provider';
+import { useFirebase } from '@/contexts/auth-provider';
 import { Skeleton } from '../ui/skeleton';
 
 const AUTH_ROUTES = ['/auth'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { supabase, session, isLoading } = useSupabase();
+  const { user, isLoading } = useFirebase();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isLoading || !supabase) return;
+    if (isLoading) return;
 
     const isAuthRoute = AUTH_ROUTES.includes(pathname);
 
-    if (!session && !isAuthRoute) {
+    if (!user && !isAuthRoute) {
       router.push('/auth');
     }
 
-    if (session && isAuthRoute) {
+    if (user && isAuthRoute) {
       router.push('/');
     }
-  }, [session, isLoading, router, pathname, supabase]);
+  }, [user, isLoading, router, pathname]);
 
   if (isLoading) {
     return (
@@ -40,23 +40,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If Supabase is not configured, we might show a message or just the children (which could be the login page)
-  if (!supabase) {
-      // You can add a message here to prompt the user to configure Supabase
-       if (AUTH_ROUTES.includes(pathname)) {
-        return <>{children}</>;
-       }
-       // Redirect to auth page if not configured and not on it
-       if (!AUTH_ROUTES.includes(pathname)) {
-           router.push('/auth');
-       }
-       return null; // Or a loading/configuration needed screen
-  }
-
-
   // If on an auth route, don't show the main layout, just the auth page children
   if (AUTH_ROUTES.includes(pathname)) {
     return <>{children}</>;
+  }
+
+  // If there's no user, children will be null to prevent flashing the main layout
+  if (!user) {
+    return null;
   }
 
 

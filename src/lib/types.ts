@@ -1,12 +1,13 @@
 
 import type { LucideIcon } from 'lucide-react';
 import { icons } from 'lucide-react';
+import type { Timestamp } from 'firebase/firestore';
 
 export type Wallet = {
   id: string;
   name: string;
   initialBalance: number;
-  createdAt: string;
+  createdAt: Timestamp | Date | string;
 };
 
 export type Tag = {
@@ -16,7 +17,7 @@ export type Tag = {
   textColor: string;
   bgColor: string;
   limit?: number; // Monthly spending limit
-  createdAt: string;
+  createdAt: Timestamp | Date | string;
 };
 
 export type TransactionType = 'income' | 'expense';
@@ -28,7 +29,6 @@ export type Transaction = {
   type: TransactionType;
   amount: number;
   description: string;
-  createdAt: Date | string; // Allow string for serialization
-  sourceWalletId?: string | null; // Corrected type
-  user_id: string;
+  createdAt: Timestamp | Date | string; 
+  sourceWalletId?: string | null;
 };

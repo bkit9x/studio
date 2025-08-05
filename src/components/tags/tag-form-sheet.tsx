@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { icons, type LucideIcon } from 'lucide-react';
 
 import type { Tag } from '@/lib/types';
-import { useSupabaseTable } from '@/hooks/use-supabase-data';
+import { useFirestoreTable } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -66,7 +66,7 @@ interface TagFormSheetProps {
 }
 
 export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
-  const { addItem: addTag, updateItem: updateTag } = useSupabaseTable<Tag>('tags');
+  const { addItem: addTag, updateItem: updateTag } = useFirestoreTable<Tag>('tags');
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 

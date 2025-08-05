@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Download, Upload, AlertTriangle, Trash2 } from "lucide-react";
+import { ChevronRight, LogOut, Download, Upload, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useSupabase } from "@/contexts/auth-provider";
+import { useFirebase } from "@/contexts/auth-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useSupabaseData } from "@/hooks/use-supabase-data";
+import { useFirebaseData } from "@/hooks/use-firebase-data";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
 
@@ -39,20 +39,17 @@ const SettingsItem = ({ children, onClick, asChild = false }: { children: React.
 }
 
 export default function SettingsPage() {
-  const { supabase, user } = useSupabase();
+  const { auth, user } = useFirebase();
   const router = useRouter();
-  const { wallets, tags, transactions, bulkInsert, clearAllData } = useSupabaseData();
+  const { wallets, tags, transactions, bulkInsert, clearAllData } = useFirebaseData();
   const { toast } = useToast();
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
   const [importFileContent, setImportFileContent] = useState<any>(null);
 
 
   const handleSignOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    // No need to clear local storage as we are using Supabase now and state is not persisted
+    await auth.signOut();
     router.push('/auth');
-    router.refresh();
   }
   
   const handleExport = (format: 'json' | 'csv') => {
@@ -163,7 +160,7 @@ export default function SettingsPage() {
             <CardDescription>{user?.email ?? 'Đang tải...'}</CardDescription>
         </CardHeader>
         <CardContent>
-            <Button variant="destructive" className="w-full" onClick={handleSignOut} disabled={!supabase}>
+            <Button variant="destructive" className="w-full" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" /> Đăng xuất
             </Button>
         </CardContent>

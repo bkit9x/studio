@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { useSupabaseData, useSupabaseTable } from "@/hooks/use-supabase-data";
+import { useFirebaseData, useFirestoreTable } from "@/hooks/use-firebase-data";
 import type { Wallet, Transaction } from "@/lib/types";
 import { WalletFormSheet } from "@/components/wallets/wallet-form-sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -73,9 +73,9 @@ const WalletItem = ({ wallet, transactions, onEdit, onDelete }: { wallet: Wallet
 }
 
 export default function WalletsPage() {
-  const { wallets, transactions, isLoading } = useSupabaseData();
-  const { deleteItem: deleteWallet } = useSupabaseTable<Wallet>('wallets');
-  const { bulkDelete: deleteTransactions } = useSupabaseTable<Transaction>('transactions');
+  const { wallets, transactions } = useFirebaseData();
+  const { deleteItem: deleteWallet } = useFirestoreTable<Wallet>('wallets');
+  const { bulkDelete: deleteTransactions } = useFirestoreTable<Transaction>('transactions');
   
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);

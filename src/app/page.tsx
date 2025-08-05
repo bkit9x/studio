@@ -4,21 +4,32 @@
 import { useEffect, useState } from "react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { useSupabaseData } from "@/hooks/use-supabase-data";
+import { useFirebaseData } from "@/hooks/use-firebase-data";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
-  const { wallets, transactions, isLoading } = useSupabaseData();
-  
-  // Use useState for selectedWalletId since localStorage persistence is handled differently now.
+  const { wallets, transactions, isLoading } = useFirebaseData();
   const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     // Set a default wallet if none is selected, once data is loaded
     if (!isLoading && wallets.length > 0 && !selectedWalletId) {
-      setSelectedWalletId(wallets[0].id);
+        // Check local storage for previously selected wallet
+        const storedWalletId = localStorage.getItem('selectedWalletId');
+        if (storedWalletId && wallets.some(w => w.id === storedWalletId)) {
+            setSelectedWalletId(storedWalletId);
+        } else {
+            setSelectedWalletId(wallets[0].id);
+        }
     }
-  }, [wallets, selectedWalletId, setSelectedWalletId, isLoading]);
+  }, [wallets, selectedWalletId, isLoading]);
+  
+  // Save selected wallet to local storage
+  useEffect(() => {
+      if (selectedWalletId) {
+          localStorage.setItem('selectedWalletId', selectedWalletId);
+      }
+  }, [selectedWalletId])
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
   

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
+import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
 import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
@@ -42,15 +42,15 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 
     const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
     
-    const transactionDate = typeof transaction.createdAt === 'string' 
-        ? new Date(transaction.createdAt) 
-        : transaction.createdAt;
+    const transactionDate = transaction.createdAt instanceof Date 
+        ? transaction.createdAt 
+        : new Date(transaction.createdAt);
 
     const isIncome = transaction.type === 'income';
     const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;
 
     return (
-        <div className="flex items-center space-x-4 p-4 bg-white">
+        <div className="flex items-center space-x-4 p-4 bg-card">
             <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tag.bgColor)}>
                 {IconComponent && <IconComponent className={cn("h-5 w-5", tag.textColor)} />}
             </div>
@@ -85,8 +85,8 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 }
 
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
-    const { tags } = useSupabaseData();
-    const { deleteItem: deleteTransaction, bulkDelete: bulkDeleteTransactions } = useSupabaseTable<Transaction>('transactions');
+    const { tags } = useFirebaseData();
+    const { deleteItem: deleteTransaction, bulkDelete: bulkDeleteTransactions } = useFirestoreTable<Transaction>('transactions');
     
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
@@ -130,9 +130,10 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         setIsAlertOpen(false);
         setTransactionToDelete(null);
     };
-
+    
     const groupedTransactions = transactions.reduce((acc, tx) => {
-        const dateKey = format(new Date(tx.createdAt), 'yyyy-MM-dd');
+        const date = tx.createdAt instanceof Date ? tx.createdAt : new Date(tx.createdAt);
+        const dateKey = format(date, 'yyyy-MM-dd');
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -164,7 +165,6 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                     <Card>
                         <CardContent className="divide-y p-0 overflow-hidden">
                            {groupedTransactions[date]
-                            .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .map(tx => (
                                 <TransactionItem 
                                     key={tx.id} 

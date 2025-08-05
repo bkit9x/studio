@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
 import type { Transaction, TransactionType, Wallet as WalletType, Tag } from '@/lib/types';
-import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
+import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -64,8 +64,8 @@ interface AddTransactionSheetProps {
 }
 
 export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selectedWalletId }: AddTransactionSheetProps) {
-  const { wallets, tags } = useSupabaseData();
-  const { addItem: addTransaction, updateItem: updateTransaction } = useSupabaseTable<Transaction>('transactions');
+  const { wallets, tags } = useFirebaseData();
+  const { addItem: addTransaction, updateItem: updateTransaction } = useFirestoreTable<Transaction>('transactions');
   const { toast } = useToast();
 
   const isEditMode = !!transaction;
@@ -89,10 +89,10 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 type: transaction.type,
                 amount: transaction.amount,
                 description: transaction.description,
-                createdAt: new Date(transaction.createdAt),
+                createdAt: transaction.createdAt instanceof Date ? transaction.createdAt : new Date(transaction.createdAt),
                 walletId: transaction.walletId,
                 tagId: transaction.tagId,
-                sourceWalletId: transaction.sourceWalletId,
+                sourceWalletId: transaction.sourceWalletId || undefined,
             });
         } else {
             form.reset({
@@ -114,7 +114,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
         const { type, ...updates } = data; // cannot update type
         await updateTransaction(transaction.id, {
             ...updates,
-            createdAt: data.createdAt.toISOString(),
         });
         toast({
             title: "Thành công!",
@@ -138,7 +137,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 description: `Chuyển tiền đến ${destinationWallet.name}`,
                 tagId: transferTag.id,
                 walletId: sourceWallet.id,
-                createdAt: data.createdAt.toISOString(),
+                createdAt: data.createdAt,
                 sourceWalletId: data.sourceWalletId,
             };
 
@@ -148,7 +147,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 description: `Nhận tiền từ ${sourceWallet.name}`,
                 tagId: data.tagId,
                 walletId: data.walletId,
-                createdAt: data.createdAt.toISOString(),
+                createdAt: data.createdAt,
                 sourceWalletId: data.sourceWalletId,
             };
 
@@ -162,10 +161,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
         } else {
             // Regular income/expense
-            await addTransaction({
-              ...data,
-              createdAt: data.createdAt.toISOString(),
-            });
+            await addTransaction(data);
             toast({
               title: "Thành công!",
               description: "Đã thêm giao dịch mới.",

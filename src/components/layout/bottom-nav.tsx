@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { AddTransactionSheet } from '@/components/add-transaction-sheet';
-import { useSupabaseData } from '@/hooks/use-supabase-data';
+import { useFirebaseData } from '@/hooks/use-firebase-data';
 
 
 const NavItem = ({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) => {
@@ -29,20 +29,18 @@ const NavItem = ({ href, icon: Icon, label }: { href: string; icon: LucideIcon; 
 
 export function BottomNav() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  // This is a bit of a workaround to pass client-side state to the sheet.
-  // A more robust solution might involve a global state manager like Zustand or Jotai.
-  const { wallets } = useSupabaseData();
+  const { wallets } = useFirebaseData();
   const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
 
-  // Keep track of the selected wallet on the main page to pass to the sheet.
-  // This logic is duplicated from the main page, which is not ideal.
-  // A better solution would be to lift the state up.
   const pathname = usePathname();
+  
+  // This effect syncs the selected wallet from localStorage to the state
+  // to ensure the "Add Transaction" sheet opens with the correct wallet selected.
   useEffect(() => {
     if (pathname === '/') {
       const storedId = localStorage.getItem('selectedWalletId');
-      if (storedId) {
-        setSelectedWalletId(JSON.parse(storedId));
+      if (storedId && wallets.some(w => w.id === storedId)) {
+        setSelectedWalletId(storedId);
       } else if (wallets.length > 0) {
         setSelectedWalletId(wallets[0].id);
       }

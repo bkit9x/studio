@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import type { Wallet } from '@/lib/types';
-import { useSupabaseTable } from '@/hooks/use-supabase-data';
+import { useFirestoreTable } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -30,7 +30,7 @@ interface WalletFormSheetProps {
 }
 
 export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormSheetProps) {
-  const { addItem: addWallet, updateItem: updateWallet } = useSupabaseTable<Wallet>('wallets');
+  const { addItem: addWallet, updateItem: updateWallet } = useFirestoreTable<Wallet>('wallets');
   const { toast } = useToast();
 
   const form = useForm<WalletFormValues>({
