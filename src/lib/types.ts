@@ -10,9 +10,12 @@ export type Wallet = {
   createdAt: Timestamp | Date | string;
 };
 
+export type TagType = 'income' | 'expense';
+
 export type Tag = {
   id: string;
   name: string;
+  type: TagType;
   icon: keyof typeof icons;
   textColor: string;
   bgColor: string;

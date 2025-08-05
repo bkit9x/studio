@@ -89,7 +89,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 type: transaction.type,
                 amount: transaction.amount,
                 description: transaction.description,
-                createdAt: transaction.createdAt instanceof Date ? transaction.createdAt : new Date(transaction.createdAt),
+                createdAt: transaction.createdAt instanceof Date ? transaction.createdAt : new Date(transaction.createdAt as string),
                 walletId: transaction.walletId,
                 tagId: transaction.tagId,
                 sourceWalletId: transaction.sourceWalletId || undefined,
@@ -125,33 +125,44 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
             description: "Đã cập nhật giao dịch.",
         });
     } else {
-        if (transactionData.type === 'income' && transactionData.sourceWalletId && transactionData.sourceWalletId !== 'none' && transactionData.sourceWalletId !== transactionData.walletId) {
+        const isTransfer = tags.find(t => t.id === transactionData.tagId)?.name === 'Chuyển khoản';
+        
+        if (isTransfer && transactionData.sourceWalletId && transactionData.sourceWalletId !== 'none' && transactionData.sourceWalletId !== transactionData.walletId) {
             // Transfer between wallets
             const sourceWallet = wallets.find(w => w.id === transactionData.sourceWalletId);
             const destinationWallet = wallets.find(w => w.id === transactionData.walletId);
-            const transferTag = tags.find(t => t.name === 'Chuyển khoản') || tags[0];
 
             if (!sourceWallet || !destinationWallet) {
                 toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy ví.' });
                 return false;
             }
 
+            const transferExpenseTag = tags.find(t => t.name === 'Chuyển khoản' && t.type === 'expense');
+            const transferIncomeTag = tags.find(t => t.name === 'Nhận tiền' && t.type === 'income');
+            
+            if (!transferExpenseTag) {
+                toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy hạng mục "Chuyển khoản".' });
+                return false;
+            }
+
+            // Create expense from source wallet
             const expenseTransaction = {
                 type: 'expense' as TransactionType,
                 amount: transactionData.amount,
                 description: `Chuyển tiền đến ${destinationWallet.name}`,
-                tagId: transferTag.id,
+                tagId: transferExpenseTag.id,
                 walletId: sourceWallet.id,
                 createdAt: transactionData.createdAt,
                 sourceWalletId: transactionData.sourceWalletId,
             };
 
-            const incomeTransaction = {
+            // Create income to destination wallet
+             const incomeTransaction = {
                 type: 'income' as TransactionType,
                 amount: transactionData.amount,
                 description: `Nhận tiền từ ${sourceWallet.name}`,
-                tagId: transactionData.tagId,
-                walletId: transactionData.walletId,
+                tagId: transferIncomeTag?.id || transactionData.tagId, // Use a dedicated "Receive Money" tag if it exists
+                walletId: destinationWallet.id,
                 createdAt: transactionData.createdAt,
                 sourceWalletId: transactionData.sourceWalletId,
             };
@@ -223,12 +234,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                     const newType = value as TransactionType;
                     field.onChange(newType);
                     form.setValue('tagId', '');
-                    if (newType === 'income') {
-                        const incomeTag = tags.find(t => t.name === 'Thu nhập');
-                        if (incomeTag) {
-                            form.setValue('tagId', incomeTag.id);
-                        }
-                    }
                   }}
                   className="w-full pt-4"
                 >
@@ -325,22 +330,28 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
               />
             </div>
 
-            {transactionType === 'income' && !isEditMode && (
+            {transactionType === 'expense' && !isEditMode && (
                  <FormField
                     control={form.control}
                     name="sourceWalletId"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Từ ví (Tùy chọn)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>Đến ví (Tùy chọn)</FormLabel>
+                        <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            const transferTag = tags.find(t => t.name === 'Chuyển khoản');
+                            if (value !== 'none' && transferTag) {
+                                form.setValue('tagId', transferTag.id);
+                            }
+                        }} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
                             <Wallet className="mr-2 h-4 w-4" />
-                            <SelectValue placeholder="Chuyển tiền từ ví..." />
+                            <SelectValue placeholder="Chuyển tiền đến ví..." />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="none">Không chọn</SelectItem>
+                            <SelectItem value="none">Không phải chuyển tiền</SelectItem>
                             {wallets.filter(w => w.id !== form.getValues('walletId')).map(wallet => (
                                 <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
                             ))}
@@ -361,13 +372,20 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                    <ScrollArea className="w-full whitespace-nowrap -mx-2 px-4">
                      <div className="flex w-max space-x-2 py-2 mx-1">
                         {tags
-                          .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
+                          .filter(t => t.type === transactionType)
                           .map(tag => (
                             <TagButton
                                 key={tag.id}
                                 tag={tag}
                                 isSelected={field.value === tag.id}
-                                onClick={() => field.onChange(tag.id)}
+                                onClick={() => {
+                                    field.onChange(tag.id)
+                                    // If user selects transfer tag, ensure source wallet is handled
+                                    const isTransfer = tag.name === 'Chuyển khoản';
+                                    if (!isTransfer) {
+                                        form.setValue('sourceWalletId', 'none');
+                                    }
+                                }}
                             />
                         ))}
                      </div>

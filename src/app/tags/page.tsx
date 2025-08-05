@@ -66,12 +66,12 @@ const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, on
                         "text-sm font-medium",
                         isExceeded ? "text-destructive" : "text-muted-foreground"
                     )}>
-                        Đã chi: {formatCurrency(spent)}
-                        {tag.limit && ` / ${formatCurrency(tag.limit)}`}
+                        {tag.type === 'expense' && 'Đã chi: '}{formatCurrency(spent)}
+                        {tag.type === 'expense' && tag.limit && ` / ${formatCurrency(tag.limit)}`}
                     </p>
                 </div>
             </div>
-            {tag.limit && tag.limit > 0 && tag.name !== 'Thu nhập' &&(
+            {tag.type === 'expense' && tag.limit && tag.limit > 0 && (
                 <div className="mt-4">
                    <Progress value={progress} className={cn(
                        "h-2",
@@ -137,16 +137,16 @@ export default function TagsPage() {
     setTagToDelete(null);
   }
   
-  const getMonthlySpentAmount = (tagId: string) => {
+  const getMonthlyAmountByTag = (tagId: string, type: 'income' | 'expense') => {
     const currentMonth = getMonth(new Date());
     const currentYear = getYear(new Date());
     
     return transactions
         .filter(t => {
-            const transactionDate = new Date(t.createdAt);
+            const transactionDate = t.createdAt instanceof Date ? t.createdAt : new Date(t.createdAt as string);
             return (
                 t.tagId === tagId && 
-                t.type === 'expense' &&
+                t.type === type &&
                 getMonth(transactionDate) === currentMonth &&
                 getYear(transactionDate) === currentYear
             )
@@ -163,31 +163,37 @@ export default function TagsPage() {
         </Button>
       </div>
       <p className="text-muted-foreground">Tạo, quản lý và đặt hạn mức chi tiêu.</p>
+      
+      <h2 className="text-lg font-bold pt-4">Hạng mục Chi tiêu</h2>
       <div className="space-y-4">
         {tags
-            .filter(t => t.name !== 'Thu nhập')
+            .filter(t => t.type === 'expense')
             .map(tag => (
             <TagItem 
                 key={tag.id} 
                 tag={tag} 
-                spent={getMonthlySpentAmount(tag.id)} 
-                onEdit={() => handleEditTag(tag)}
-                onDelete={() => handleDeleteRequest(tag.id)}
-            />
-        ))}
-         <h2 className="text-lg font-bold pt-4">Hạng mục Thu nhập</h2>
-         {tags
-            .filter(t => t.name === 'Thu nhập')
-            .map(tag => (
-             <TagItem 
-                key={tag.id} 
-                tag={tag} 
-                spent={0}
+                spent={getMonthlyAmountByTag(tag.id, 'expense')} 
                 onEdit={() => handleEditTag(tag)}
                 onDelete={() => handleDeleteRequest(tag.id)}
             />
         ))}
       </div>
+        
+      <h2 className="text-lg font-bold pt-4">Hạng mục Thu nhập</h2>
+      <div className="space-y-4">
+        {tags
+            .filter(t => t.type === 'income')
+            .map(tag => (
+            <TagItem 
+                key={tag.id} 
+                tag={tag} 
+                spent={getMonthlyAmountByTag(tag.id, 'income')} 
+                onEdit={() => handleEditTag(tag)}
+                onDelete={() => handleDeleteRequest(tag.id)}
+            />
+        ))}
+      </div>
+
        <TagFormSheet 
         isOpen={isSheetOpen} 
         onOpenChange={setIsSheetOpen}

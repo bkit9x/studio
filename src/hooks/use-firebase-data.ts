@@ -34,15 +34,13 @@ export const seedInitialDataForUser = async (userId: string) => {
     const batch = writeBatch(db);
 
     mockWallets.forEach(wallet => {
-        const { id, ...rest } = wallet;
         const walletRef = doc(collection(db, `users/${userId}/wallets`));
-        batch.set(walletRef, { ...rest, createdAt: serverTimestamp() });
+        batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
     });
 
     mockTags.forEach(tag => {
-        const { id, ...rest } = tag;
         const tagRef = doc(collection(db, `users/${userId}/tags`));
-        batch.set(tagRef, { ...rest, createdAt: serverTimestamp() });
+        batch.set(tagRef, { ...tag, createdAt: serverTimestamp() });
     });
     
     await batch.commit();
@@ -76,8 +74,11 @@ export function useFirebaseData() {
         return onSnapshot(q, (querySnapshot) => {
              const data = querySnapshot.docs.map(doc => {
                 const docData = doc.data();
-                if (docData.createdAt instanceof Timestamp) {
-                    docData.createdAt = docData.createdAt.toDate();
+                // Firestore Timestamps need to be converted to JS Dates
+                for (const key in docData) {
+                    if (docData[key] instanceof Timestamp) {
+                       docData[key] = docData[key].toDate();
+                    }
                 }
                 return { id: doc.id, ...docData } as any;
             });
@@ -104,9 +105,15 @@ export function useFirebaseData() {
     
     const batch = writeBatch(db);
     
-    wallets.forEach(w => batch.delete(doc(db, `users/${user.uid}/wallets`, w.id)));
-    tags.forEach(t => batch.delete(doc(db, `users/${user.uid}/tags`, t.id)));
-    transactions.forEach(tx => batch.delete(doc(db, `users/${user.uid}/transactions`, tx.id)));
+    // Fetch all document IDs to delete
+    const walletsSnapshot = await getDocs(collection(db, `users/${user.uid}/wallets`));
+    walletsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+    const tagsSnapshot = await getDocs(collection(db, `users/${user.uid}/tags`));
+    tagsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+    const transactionsSnapshot = await getDocs(collection(db, `users/${user.uid}/transactions`));
+    transactionsSnapshot.forEach(doc => batch.delete(doc.ref));
     
     await batch.commit();
   };
@@ -119,26 +126,6 @@ export function useFirebaseData() {
     if (!user) throw new Error("User not authenticated");
 
     await clearAllData();
-    
-    const batch = writeBatch(db);
-
-    newWallets.forEach(w => {
-        const { id, ...data } = w;
-        const ref = doc(collection(db, `users/${user.uid}/wallets`));
-        batch.set(ref, { ...data, createdAt: new Date(w.createdAt) });
-    });
-    newTags.forEach(t => {
-        const { id, ...data } = t;
-        const ref = doc(collection(db, `users/${user.uid}/tags`));
-        batch.set(ref, { ...data, createdAt: new Date(t.createdAt) });
-    });
-    newTransactions.forEach(tx => {
-        const { id, ...data } = tx;
-        const ref = doc(collection(db, `users/${user.uid}/transactions`));
-        batch.set(ref, { ...data, createdAt: new Date(tx.createdAt) });
-    });
-
-    await batch.commit();
     await seedInitialDataForUser(user.uid);
   };
 

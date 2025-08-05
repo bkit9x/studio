@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { icons, type LucideIcon } from 'lucide-react';
 
-import type { Tag } from '@/lib/types';
+import type { Tag, TagType } from '@/lib/types';
 import { useFirestoreTable } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ const spendingIcons = [
   'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
 ] as const;
 
-const incomeIcons = ['Plus', 'Landmark', 'Briefcase', 'Gift'] as const;
+const incomeIcons = ['Briefcase', 'Gift', 'Plus', 'Landmark'] as const;
 
 const iconNames = [...new Set([...spendingIcons, ...incomeIcons])];
 
@@ -52,6 +52,7 @@ const colors = [
 
 const tagSchema = z.object({
   name: z.string().min(1, { message: 'Tên hạng mục không được để trống.' }),
+  type: z.enum(['expense', 'income'], { required_error: 'Vui lòng chọn loại hạng mục.' }),
   icon: z.string().min(1, { message: 'Vui lòng chọn một biểu tượng.' }),
   colorIndex: z.coerce.number().min(0).max(colors.length - 1),
   limit: z.coerce.number().min(0, { message: 'Hạn mức phải là số không âm.' }).optional(),
@@ -74,6 +75,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     resolver: zodResolver(tagSchema),
     defaultValues: {
         name: '',
+        type: 'expense',
         icon: 'ShoppingCart',
         colorIndex: 0,
         limit: 0,
@@ -86,6 +88,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
             const colorIndex = colors.findIndex(c => c.bgColor === tag.bgColor);
             form.reset({
                 name: tag.name,
+                type: tag.type,
                 icon: tag.icon,
                 colorIndex: colorIndex !== -1 ? colorIndex : 0,
                 limit: tag.limit ?? 0,
@@ -93,6 +96,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         } else {
             form.reset({
                 name: '',
+                type: 'expense',
                 icon: 'ShoppingCart',
                 colorIndex: 0,
                 limit: 0,
@@ -106,10 +110,11 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     const selectedColor = colors[data.colorIndex];
     const newTagData = {
         name: data.name,
+        type: data.type,
         icon: data.icon as keyof typeof icons,
         textColor: selectedColor.textColor,
         bgColor: selectedColor.bgColor,
-        limit: data.limit || null, // Store as null if 0 or empty
+        limit: data.type === 'expense' ? (data.limit || null) : null,
     };
     
     if(tag) {
@@ -139,7 +144,18 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
   const SelectedIcon = icons[selectedIconName as keyof typeof icons] ?? icons['ShoppingCart'];
   const selectedColorIndex = form.watch('colorIndex');
   const selectedColor = colors[selectedColorIndex];
+  const tagType = form.watch('type');
 
+  useEffect(() => {
+      // Reset icon if it's not in the allowed list for the selected type
+      if (tagType === 'income' && !incomeIcons.includes(selectedIconName as any)) {
+          form.setValue('icon', incomeIcons[0]);
+      } else if (tagType === 'expense' && !spendingIcons.includes(selectedIconName as any)) {
+          form.setValue('icon', spendingIcons[0]);
+      }
+  }, [tagType, selectedIconName, form]);
+
+  const availableIcons = tagType === 'income' ? incomeIcons : iconNames;
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -157,6 +173,28 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         
         <Form {...form}>
           <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 space-y-4 pt-4">
+            
+             <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Loại hạng mục</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!!tag}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn loại hạng mục" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="expense">Chi tiêu</SelectItem>
+                      <SelectItem value="income">Thu nhập</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -172,19 +210,21 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
               )}
             />
 
-            <FormField
-                control={form.control}
-                name="limit"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Hạn mức chi tiêu hàng tháng (Tùy chọn)</FormLabel>
-                    <FormControl>
-                    <Input {...field} type="number" placeholder="0" />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+            {tagType === 'expense' && (
+                <FormField
+                    control={form.control}
+                    name="limit"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Hạn mức chi tiêu hàng tháng (Tùy chọn)</FormLabel>
+                        <FormControl>
+                        <Input {...field} value={field.value ?? ''} type="number" placeholder="0" />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
             
             <FormField
               control={form.control}
@@ -203,7 +243,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
                     </FormControl>
                     <SelectContent>
                         <ScrollArea className="h-72">
-                         {iconNames.map((iconName) => {
+                         {availableIcons.map((iconName) => {
                             const IconComponent = icons[iconName as keyof typeof icons];
                             if (!IconComponent) return null;
                             return (
