@@ -6,9 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useSupabaseData, useSupabaseTable } from "@/hooks/use-supabase-data";
 import type { Wallet, Transaction } from "@/lib/types";
-import { mockWallets } from "@/data/mock-data";
 import { WalletFormSheet } from "@/components/wallets/wallet-form-sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
@@ -20,7 +19,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const WalletItem = ({ wallet, transactions, onEdit, onDelete }: { wallet: Wallet; transactions: Transaction[], onEdit: () => void; onDelete: () => void; }) => {
     const relevantTransactions = transactions.filter(t => t.walletId === wallet.id);
@@ -73,12 +73,15 @@ const WalletItem = ({ wallet, transactions, onEdit, onDelete }: { wallet: Wallet
 }
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
+  const { wallets, transactions, isLoading } = useSupabaseData();
+  const { deleteItem: deleteWallet } = useSupabaseTable<Wallet>('wallets');
+  const { bulkDelete: deleteTransactions } = useSupabaseTable<Transaction>('transactions');
+  
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | undefined>(undefined);
   const [walletToDelete, setWalletToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleAddWallet = () => {
     setSelectedWallet(undefined);
@@ -95,19 +98,30 @@ export default function WalletsPage() {
     setIsAlertOpen(true);
   }
 
-  const handleDeleteConfirm = () => {
-    if (walletToDelete) {
-      // Prevent deleting the last wallet
-      if (wallets.length <= 1) {
-        // Here you might want to show a toast message
-        console.error("Cannot delete the last wallet.");
+  const handleDeleteConfirm = async () => {
+    if (!walletToDelete) return;
+      
+    if (wallets.length <= 1) {
+        toast({ variant: "destructive", title: "Lỗi", description: "Không thể xóa ví cuối cùng." });
         setIsAlertOpen(false);
         return;
-      }
-      setWallets(wallets.filter(w => w.id !== walletToDelete));
-      // Also delete associated transactions
-      setTransactions(transactions.filter(t => t.walletId !== walletToDelete));
     }
+    
+    // Find transactions associated with the wallet to be deleted
+    const transactionsToDelete = transactions
+        .filter(t => t.walletId === walletToDelete)
+        .map(t => t.id);
+
+    // Delete associated transactions first
+    if (transactionsToDelete.length > 0) {
+        await deleteTransactions(transactionsToDelete);
+    }
+    
+    // Then delete the wallet
+    await deleteWallet(walletToDelete);
+
+    toast({ title: "Thành công!", description: "Đã xóa ví và các giao dịch liên quan." });
+    
     setIsAlertOpen(false);
     setWalletToDelete(null);
   }

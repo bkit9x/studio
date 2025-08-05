@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { mockTags } from '@/data/mock-data';
+import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
 import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
@@ -86,11 +85,11 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 }
 
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
-    const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
-    const [allTransactions, setAllTransactions] = useLocalStorage<Transaction[]>("transactions", []);
+    const { tags } = useSupabaseData();
+    const { deleteItem: deleteTransaction, bulkDelete: bulkDeleteTransactions } = useSupabaseTable<Transaction>('transactions');
     
     const [isAlertOpen, setIsAlertOpen] = useState(false);
-    const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+    const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [transactionToUpdate, setTransactionToUpdate] = useState<Transaction | undefined>(undefined);
     const { toast } = useToast();
@@ -102,16 +101,32 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         setIsSheetOpen(true);
     };
 
-    const handleDeleteRequest = (id: string) => {
-        setTransactionToDelete(id);
+    const handleDeleteRequest = (tx: Transaction) => {
+        setTransactionToDelete(tx);
         setIsAlertOpen(true);
     };
 
-    const handleDeleteConfirm = () => {
-        if (transactionToDelete) {
-            setAllTransactions(allTransactions.filter(t => t.id !== transactionToDelete));
-            toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
+    const handleDeleteConfirm = async () => {
+        if (!transactionToDelete) return;
+        
+        // If it's a transfer, delete both linked transactions
+        if (transactionToDelete.sourceWalletId && transactionToDelete.sourceWalletId !== 'none') {
+            const linkedTransaction = transactions.find(t => 
+                t.sourceWalletId === transactionToDelete.sourceWalletId && 
+                t.id !== transactionToDelete.id &&
+                t.amount === transactionToDelete.amount
+            );
+            const idsToDelete = [transactionToDelete.id];
+            if(linkedTransaction) {
+                idsToDelete.push(linkedTransaction.id);
+            }
+            await bulkDeleteTransactions(idsToDelete);
+            toast({ title: "Thành công!", description: "Đã xóa giao dịch chuyển tiền." });
+        } else {
+             await deleteTransaction(transactionToDelete.id);
+             toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
         }
+
         setIsAlertOpen(false);
         setTransactionToDelete(null);
     };
@@ -156,7 +171,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                                     transaction={tx} 
                                     tag={getTagById(tx.tagId)}
                                     onUpdate={() => handleUpdateRequest(tx)}
-                                    onDelete={() => handleDeleteRequest(tx.id)}
+                                    onDelete={() => handleDeleteRequest(tx)}
                                 />
                             ))}
                         </CardContent>
@@ -185,5 +200,3 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         </div>
     );
 }
-
-    

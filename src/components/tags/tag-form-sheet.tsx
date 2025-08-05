@@ -8,9 +8,8 @@ import { z } from 'zod';
 import { icons, type LucideIcon } from 'lucide-react';
 
 import type { Tag } from '@/lib/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
 import { useToast } from '@/hooks/use-toast';
-import { mockTags } from '@/data/mock-data';
 import { cn } from '@/lib/utils';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -67,7 +66,7 @@ interface TagFormSheetProps {
 }
 
 export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
-  const [tags, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
+  const { addItem: addTag, updateItem: updateTag } = useSupabaseTable<Tag>('tags');
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -103,7 +102,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
   }, [tag, form, isOpen]);
 
 
-  function onSubmit(data: TagFormValues) {
+  async function onSubmit(data: TagFormValues) {
     const selectedColor = colors[data.colorIndex];
     const newTagData = {
         name: data.name,
@@ -114,22 +113,13 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     };
     
     if(tag) {
-        const updatedTags = tags.map(t => t.id === tag.id ? { ...t, ...newTagData } : t);
-        setTags(updatedTags);
+        await updateTag(tag.id, newTagData);
         toast({
             title: "Thành công!",
             description: "Đã cập nhật hạng mục.",
         });
     } else { 
-        const newTag: Tag = {
-            id: crypto.randomUUID(),
-            name: newTagData.name,
-            icon: newTagData.icon,
-            textColor: newTagData.textColor,
-            bgColor: newTagData.bgColor,
-            limit: newTagData.limit,
-        };
-        setTags([...tags, newTag]);
+        await addTag(newTagData);
         toast({
             title: "Thành công!",
             description: "Đã thêm hạng mục mới.",
@@ -279,4 +269,3 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     </Sheet>
   );
 }
-

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, AlertTriangle } from "lucide-react";
+import { ChevronRight, LogOut, Download, Upload, AlertTriangle, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,33 +17,135 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useSupabase } from "@/contexts/auth-provider";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useSupabaseData } from "@/hooks/use-supabase-data";
+import { useToast } from "@/hooks/use-toast";
+import type { Wallet, Tag, Transaction } from "@/lib/types";
 
 
-const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
+const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
+    const Comp = asChild ? "div" : "button";
     return (
-    <div
-      className="flex items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer"
+    <Comp
+      className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
         <div className="flex items-center gap-3">
          {children}
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </div>
+    </Comp>
     )
 }
 
 export default function SettingsPage() {
   const { supabase, user } = useSupabase();
   const router = useRouter();
-  
+  const { wallets, tags, transactions, bulkInsert, clearAllData } = useSupabaseData();
+  const { toast } = useToast();
+  const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
+  const [importFileContent, setImportFileContent] = useState<any>(null);
+
+
   const handleSignOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
-    // Clear local storage on sign out to be safe
-    localStorage.clear(); 
+    // No need to clear local storage as we are using Supabase now and state is not persisted
     router.push('/auth');
     router.refresh();
+  }
+  
+  const handleExport = (format: 'json' | 'csv') => {
+    if (format === 'json') {
+      const data = { wallets, tags, transactions };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fintrack_data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } else { // CSV
+        const rows = [
+            ['ID', 'Date', 'Wallet', 'Type', 'Category', 'Amount', 'Description'],
+            ...transactions.map(t => [
+                t.id,
+                t.createdAt,
+                wallets.find(w => w.id === t.walletId)?.name || '',
+                t.type,
+                tags.find(tag => tag.id === t.tagId)?.name || '',
+                t.amount,
+                t.description
+            ].join(','))
+        ];
+        const csvContent = rows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'fintrack_transactions.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+     toast({ title: "Đã xuất dữ liệu", description: `Dữ liệu của bạn đã được tải xuống.` });
+  }
+  
+  const handleImportRequest = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result;
+                if(typeof content === 'string') {
+                    const data = JSON.parse(content);
+                    // Basic validation
+                    if(data.wallets && data.tags && data.transactions) {
+                        setImportFileContent(data);
+                    } else {
+                        toast({ variant: "destructive", title: "Lỗi", description: "Tệp JSON không hợp lệ." });
+                    }
+                }
+            } catch (error) {
+                toast({ variant: "destructive", title: "Lỗi đọc tệp", description: "Không thể đọc tệp JSON." });
+            }
+        };
+        reader.readAsText(file);
+    }
+    // Reset file input so user can select the same file again
+    event.target.value = '';
+  }
+  
+  const handleImportConfirm = async () => {
+    if (!importFileContent || !user) {
+        return;
+    }
+    
+    try {
+        await bulkInsert(
+            importFileContent.wallets,
+            importFileContent.tags,
+            importFileContent.transactions
+        );
+        toast({ title: "Thành công!", description: "Dữ liệu đã được nhập thành công." });
+    } catch (error) {
+        const err = error as Error;
+        toast({ variant: "destructive", title: "Lỗi nhập dữ liệu", description: err.message });
+    } finally {
+        setImportFileContent(null);
+    }
+  }
+  
+  const handleResetConfirm = async () => {
+    try {
+        await clearAllData();
+        toast({ title: "Thành công", description: "Đã reset toàn bộ dữ liệu."});
+    } catch (error) {
+         const err = error as Error;
+         toast({ variant: "destructive", title: "Lỗi", description: err.message });
+    } finally {
+        setIsResetAlertOpen(false);
+    }
   }
 
 
@@ -78,6 +180,41 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
       
+       <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Dữ liệu</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y p-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SettingsItem asChild>
+                  <Download className="h-5 w-5 text-muted-foreground" />
+                  <span>Xuất dữ liệu</span>
+              </SettingsItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('json')}>
+                Xuất ra JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Xuất ra CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <SettingsItem onClick={() => document.getElementById('import-input')?.click()}>
+            <Upload className="h-5 w-5 text-muted-foreground" />
+            <span>Nhập dữ liệu</span>
+            <input type="file" id="import-input" accept=".json" className="hidden" onChange={handleImportRequest} />
+          </SettingsItem>
+          
+          <SettingsItem onClick={() => setIsResetAlertOpen(true)}>
+             <Trash2 className="h-5 w-5 text-destructive" />
+             <span className="text-destructive">Reset dữ liệu</span>
+          </SettingsItem>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
             <CardTitle className="text-xl">Thông tin</CardTitle>
@@ -89,6 +226,38 @@ export default function SettingsPage() {
       </Card>
       
     </div>
+    
+     {/* Import Confirmation Dialog */}
+      <AlertDialog open={!!importFileContent} onOpenChange={() => setImportFileContent(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận nhập dữ liệu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này sẽ <b className="text-destructive">xóa tất cả dữ liệu hiện tại</b> và thay thế bằng dữ liệu từ tệp bạn đã chọn. Hành động này không thể được hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setImportFileContent(null)}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleImportConfirm}>Tiếp tục</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Confirmation Dialog */}
+       <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn reset?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này sẽ <b className="text-destructive">xóa tất cả dữ liệu hiện tại</b> của bạn trên đám mây. Hành động này không thể được hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetConfirm} className="bg-destructive hover:bg-destructive/90">Tôi hiểu, Reset</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

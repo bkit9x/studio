@@ -8,6 +8,8 @@ import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { AddTransactionSheet } from '@/components/add-transaction-sheet';
+import { useSupabaseData } from '@/hooks/use-supabase-data';
+
 
 const NavItem = ({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) => {
   const pathname = usePathname();
@@ -26,6 +28,26 @@ const NavItem = ({ href, icon: Icon, label }: { href: string; icon: LucideIcon; 
 
 export function BottomNav() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  // This is a bit of a workaround to pass client-side state to the sheet.
+  // A more robust solution might involve a global state manager like Zustand or Jotai.
+  const { wallets } = useSupabaseData();
+  const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
+
+  // Keep track of the selected wallet on the main page to pass to the sheet.
+  // This logic is duplicated from the main page, which is not ideal.
+  // A better solution would be to lift the state up.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pathname === '/') {
+      const storedId = localStorage.getItem('selectedWalletId');
+      if (storedId) {
+        setSelectedWalletId(JSON.parse(storedId));
+      } else if (wallets.length > 0) {
+        setSelectedWalletId(wallets[0].id);
+      }
+    }
+  }, [pathname, wallets]);
+
 
   return (
     <>
@@ -33,7 +55,7 @@ export function BottomNav() {
         <nav className="flex h-full items-center justify-around">
           <NavItem href="/" icon={LayoutGrid} label="Tổng quan" />
           <NavItem href="/tags" icon={Tags} label="Hạng mục" />
-          
+
           <div className="w-16 flex justify-center">
             <button
               onClick={() => setIsSheetOpen(true)}
@@ -43,12 +65,16 @@ export function BottomNav() {
               <Plus className="h-8 w-8" />
             </button>
           </div>
-          
+
           <NavItem href="/wallets" icon={Wallet} label="Ví" />
           <NavItem href="/settings" icon={Settings} label="Cài đặt" />
         </nav>
       </div>
-      <AddTransactionSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <AddTransactionSheet
+        isOpen={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        selectedWalletId={selectedWalletId}
+      />
     </>
   );
 }

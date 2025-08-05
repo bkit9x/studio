@@ -7,9 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import type { Wallet } from '@/lib/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useSupabaseTable } from '@/hooks/use-supabase-data';
 import { useToast } from '@/hooks/use-toast';
-import { mockWallets } from '@/data/mock-data';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ interface WalletFormSheetProps {
 }
 
 export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormSheetProps) {
-  const [wallets, setWallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
+  const { addItem: addWallet, updateItem: updateWallet } = useSupabaseTable<Wallet>('wallets');
   const { toast } = useToast();
 
   const form = useForm<WalletFormValues>({
@@ -53,20 +52,15 @@ export function WalletFormSheet({ isOpen, onOpenChange, wallet }: WalletFormShee
   }, [wallet, form, isOpen]);
 
 
-  function onSubmit(data: WalletFormValues) {
+  async function onSubmit(data: WalletFormValues) {
     if(wallet) { // Update existing wallet
-        const updatedWallets = wallets.map(w => w.id === wallet.id ? { ...w, ...data } : w);
-        setWallets(updatedWallets);
+        await updateWallet(wallet.id, data);
         toast({
             title: "Thành công!",
             description: "Đã cập nhật ví.",
         });
     } else { // Add new wallet
-        const newWallet: Wallet = {
-            id: crypto.randomUUID(),
-            ...data
-        };
-        setWallets([...wallets, newWallet]);
+        await addWallet(data);
         toast({
             title: "Thành công!",
             description: "Đã thêm ví mới.",

@@ -5,8 +5,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreVertical, Edit, Trash2, type LucideIcon, AlertTriangle } from "lucide-react";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { mockTags } from "@/data/mock-data";
+import { useSupabaseData, useSupabaseTable } from "@/hooks/use-supabase-data";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import type { Tag, Transaction } from "@/lib/types";
@@ -93,8 +92,9 @@ const TagItem = ({ tag, spent, onEdit, onDelete }: { tag: Tag, spent: number, on
 
 
 export default function TagsPage() {
-  const [tags, setTags] = useLocalStorage<Tag[]>("tags", mockTags);
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
+  const { tags, transactions, isLoading } = useSupabaseData();
+  const { deleteItem: deleteTag } = useSupabaseTable<Tag>('tags');
+
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<Tag | undefined>(undefined);
@@ -125,9 +125,9 @@ export default function TagsPage() {
     setIsAlertOpen(true);
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (tagToDelete) {
-        setTags(tags.filter(t => t.id !== tagToDelete));
+        await deleteTag(tagToDelete);
         toast({
             title: "Thành công",
             description: "Đã xóa hạng mục."

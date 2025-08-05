@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { format, addDays, subDays } from 'date-fns';
 import { Calendar as CalendarIcon, Wallet, type LucideIcon, icons, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -9,9 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
-import { mockTags, mockWallets } from '@/data/mock-data';
 import type { Transaction, TransactionType, Wallet as WalletType, Tag } from '@/lib/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
 import { useToast } from '@/hooks/use-toast';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -40,12 +39,12 @@ const TagButton = ({ tag, isSelected, onClick }: { tag: Tag, isSelected: boolean
     const IconComponent = icons[tag.icon as keyof typeof icons] as LucideIcon | undefined;
 
     return (
-         <button 
-          key={tag.id} 
+         <button
+          key={tag.id}
           type="button"
-          onClick={onClick} 
+          onClick={onClick}
           className={cn(
-            "flex flex-col items-center justify-center space-y-1 p-2 border rounded-lg w-20 h-20 flex-shrink-0 transition-all", 
+            "flex flex-col items-center justify-center space-y-1 p-2 border rounded-lg w-20 h-20 flex-shrink-0 transition-all",
             isSelected ? 'border-primary ring-2 ring-primary bg-primary/10' : 'border-border'
           )}
         >
@@ -61,13 +60,12 @@ interface AddTransactionSheetProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     transaction?: Transaction;
+    selectedWalletId?: string;
 }
 
-export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTransactionSheetProps) {
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
-  const [wallets] = useLocalStorage<WalletType[]>("wallets", mockWallets);
-  const [tags] = useLocalStorage<Tag[]>("tags", mockTags);
-  const [selectedWalletId] = useLocalStorage<string | undefined>("selectedWalletId", wallets[0]?.id);
+export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selectedWalletId }: AddTransactionSheetProps) {
+  const { wallets, tags, dispatchDataChangeEvent } = useSupabaseData();
+  const { addItem: addTransaction, updateItem: updateTransaction } = useSupabaseTable<Transaction>('transactions');
   const { toast } = useToast();
 
   const isEditMode = !!transaction;
@@ -83,7 +81,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
       sourceWalletId: undefined,
     }
   });
-  
+
   useEffect(() => {
     if (isOpen) {
         if (isEditMode && transaction) {
@@ -111,15 +109,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
   }, [isOpen, transaction, isEditMode, selectedWalletId, wallets, form]);
 
 
-  const saveTransaction = (data: TransactionFormValues): boolean => {
+  const saveTransaction = async (data: TransactionFormValues): Promise<boolean> => {
      if (isEditMode && transaction) {
-        const updatedTransaction: Transaction = {
-            ...transaction,
-            ...data,
+        const { type, ...updates } = data; // cannot update type
+        await updateTransaction(transaction.id, {
+            ...updates,
             createdAt: data.createdAt.toISOString(),
-        };
-        const updatedTransactions = transactions.map(t => t.id === transaction.id ? updatedTransaction : t);
-        setTransactions(updatedTransactions);
+        });
         toast({
             title: "Thành công!",
             description: "Đã cập nhật giao dịch.",
@@ -136,9 +132,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 return false;
             }
 
-            const expenseTransaction: Transaction = {
-                id: crypto.randomUUID(),
-                type: 'expense',
+            const expenseTransaction = {
+                type: 'expense' as TransactionType,
                 amount: data.amount,
                 description: `Chuyển tiền đến ${destinationWallet.name}`,
                 tagId: transferTag.id,
@@ -147,9 +142,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 sourceWalletId: data.sourceWalletId,
             };
 
-            const incomeTransaction: Transaction = {
-                id: crypto.randomUUID(),
-                type: 'income',
+            const incomeTransaction = {
+                type: 'income' as TransactionType,
                 amount: data.amount,
                 description: `Nhận tiền từ ${sourceWallet.name}`,
                 tagId: data.tagId,
@@ -157,8 +151,10 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 createdAt: data.createdAt.toISOString(),
                 sourceWalletId: data.sourceWalletId,
             };
-            
-            setTransactions([expenseTransaction, incomeTransaction, ...transactions]);
+
+            await addTransaction(expenseTransaction);
+            await addTransaction(incomeTransaction);
+
             toast({
                 title: "Thành công!",
                 description: "Đã tạo giao dịch chuyển tiền.",
@@ -166,29 +162,28 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
 
         } else {
             // Regular income/expense
-            const newTransaction: Transaction = {
-              id: crypto.randomUUID(),
+            await addTransaction({
               ...data,
               createdAt: data.createdAt.toISOString(),
-            };
-            setTransactions([newTransaction, ...transactions]);
+            });
             toast({
               title: "Thành công!",
               description: "Đã thêm giao dịch mới.",
             });
         }
     }
+    dispatchDataChangeEvent();
     return true;
   }
 
-  const handleSave = (data: TransactionFormValues) => {
-    if (saveTransaction(data)) {
+  const handleSave = async (data: TransactionFormValues) => {
+    if (await saveTransaction(data)) {
         onOpenChange(false);
     }
   }
 
-  const handleSaveAndNew = (data: TransactionFormValues) => {
-    if (saveTransaction(data)) {
+  const handleSaveAndNew = async (data: TransactionFormValues) => {
+    if (await saveTransaction(data)) {
         // Reset form but keep some fields
         form.reset({
             ...data, // This keeps wallet, tag, date, type
@@ -197,7 +192,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
         });
     }
   };
-  
+
   const transactionType = form.watch('type');
   const handleDateChange = (days: number) => {
     const currentDate = form.getValues('createdAt');
@@ -214,20 +209,20 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
             {isEditMode ? 'Chỉnh sửa thông tin giao dịch của bạn.' : 'Thêm một khoản thu hoặc chi mới vào sổ của bạn.'}
           </SheetDescription>
         </SheetHeader>
-        
+
         <Form {...form}>
           <form className="flex-1 overflow-y-auto px-6 space-y-4">
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
-                <Tabs 
+                <Tabs
                   value={field.value}
                   onValueChange={(value) => {
                     if(isEditMode) return; // Prevent changing type in edit mode
                     const newType = value as TransactionType;
                     field.onChange(newType);
-                    form.setValue('tagId', ''); 
+                    form.setValue('tagId', '');
                     if (newType === 'income') {
                         const incomeTag = tags.find(t => t.name === 'Thu nhập');
                         if (incomeTag) {
@@ -258,7 +253,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -329,7 +324,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 )}
               />
             </div>
-            
+
             {transactionType === 'income' && !isEditMode && (
                  <FormField
                     control={form.control}
@@ -368,7 +363,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                         {tags
                           .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
                           .map(tag => (
-                            <TagButton 
+                            <TagButton
                                 key={tag.id}
                                 tag={tag}
                                 isSelected={field.value === tag.id}
@@ -382,7 +377,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
                 </FormItem>
               )}
             />
-          
+
             <SheetFooter className="pt-4 sticky bottom-0 bg-background pb-6 flex-row gap-2">
                  {isEditMode ? (
                      <Button onClick={form.handleSubmit(handleSave)} className="w-full">Lưu thay đổi</Button>
@@ -403,5 +398,3 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
     </Sheet>
   );
 }
-
-    

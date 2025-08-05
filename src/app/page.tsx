@@ -4,31 +4,21 @@
 import { useEffect, useState } from "react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import type { Transaction, Wallet } from "@/lib/types";
+import { useSupabaseData } from "@/hooks/use-supabase-data";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockWallets, mockTransactions } from "@/data/mock-data";
 
 export default function Home() {
-  const [isClient, setIsClient] = useState(false);
+  const { wallets, transactions, isLoading } = useSupabaseData();
   
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", mockTransactions);
-  const [wallets] = useLocalStorage<Wallet[]>("wallets", mockWallets);
-
-  const [selectedWalletId, setSelectedWalletId] = useLocalStorage<string | undefined>(
-    "selectedWalletId", 
-    wallets[0]?.id
-  );
+  // Use useState for selectedWalletId since localStorage persistence is handled differently now.
+  const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    setIsClient(true);
-    // Ensure selectedWalletId is valid
-    if (!selectedWalletId && wallets.length > 0) {
+    // Set a default wallet if none is selected, once data is loaded
+    if (!isLoading && wallets.length > 0 && !selectedWalletId) {
       setSelectedWalletId(wallets[0].id);
-    } else if (selectedWalletId && !wallets.find(w => w.id === selectedWalletId)) {
-      setSelectedWalletId(wallets[0]?.id);
     }
-  }, [wallets, selectedWalletId, setSelectedWalletId]);
+  }, [wallets, selectedWalletId, setSelectedWalletId, isLoading]);
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
   
@@ -54,8 +44,15 @@ export default function Home() {
         <p className="text-muted-foreground">Chào mừng trở lại!</p>
       </header>
       
-      {isClient ? (
-        <OverviewCards 
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      ) : (
+         <OverviewCards 
           balance={balance}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
@@ -63,24 +60,17 @@ export default function Home() {
           selectedWalletId={selectedWalletId}
           onWalletChange={setSelectedWalletId}
         />
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
       )}
       
-      {isClient ? (
-        <TransactionList transactions={filteredTransactions} />
-      ) : (
+      {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-12" />
           <Skeleton className="h-20" />
           <Skeleton className="h-20" />
           <Skeleton className="h-20" />
         </div>
+      ) : (
+         <TransactionList transactions={filteredTransactions} />
       )}
     </div>
   );
