@@ -32,17 +32,34 @@ export function useSupabaseData() {
     
     setIsLoading(true);
     try {
+      const { data: walletsData, error: walletsError } = await supabase
+        .from('wallets')
+        .select('*')
+        .order('createdAt', { ascending: true });
+
+      if (walletsError) throw walletsError;
+
+      // If user has no wallets, seed initial data for them
+      if (walletsData.length === 0) {
+        const { error: seedError } = await supabase.rpc('seed_initial_data');
+        if (seedError) {
+            console.error("Error seeding data:", seedError);
+            toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: seedError.message });
+        } else {
+            // Refetch after seeding
+            fetchData();
+            return;
+        }
+      }
+
       const [
-        { data: walletsData, error: walletsError },
         { data: tagsData, error: tagsError },
         { data: transactionsData, error: transactionsError }
       ] = await Promise.all([
-        supabase.from('wallets').select('*').order('createdAt', { ascending: true }),
         supabase.from('tags').select('*').order('createdAt', { ascending: true }),
         supabase.from('transactions').select('*').order('createdAt', { ascending: false })
       ]);
 
-      if (walletsError) throw walletsError;
       if (tagsError) throw tagsError;
       if (transactionsError) throw transactionsError;
 
@@ -88,15 +105,9 @@ export function useSupabaseData() {
     if (!supabase || !user) throw new Error("User not authenticated");
     
     // The RLS policy should handle deleting only the user's data
-    const [walletsRes, tagsRes, transactionsRes] = await Promise.all([
-        supabase.from('wallets').delete().neq('id', '0'), // Dummy condition to delete all matching rows
-        supabase.from('tags').delete().neq('id', '0'),
-        supabase.from('transactions').delete().neq('id', '0')
-    ]);
-
-    if (walletsRes.error) throw walletsRes.error;
-    if (tagsRes.error) throw tagsRes.error;
-    if (transactionsRes.error) throw transactionsRes.error;
+    await supabase.from('transactions').delete().neq('id', '0');
+    await supabase.from('tags').delete().neq('id', '0');
+    await supabase.from('wallets').delete().neq('id', '0');
 
     // Refetch data after clearing
     dispatchDataChangeEvent();
