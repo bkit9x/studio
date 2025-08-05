@@ -83,11 +83,6 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
   useEffect(() => {
     if (isOpen) {
-        // Prevent keyboard from popping up on mobile
-        if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-        }
-
         if (tag) {
             const colorIndex = colors.findIndex(c => c.bgColor === tag.bgColor);
             form.reset({
@@ -158,7 +153,11 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-lg max-h-[90vh] flex flex-col">
+      <SheetContent 
+        side="bottom" 
+        className="rounded-t-lg max-h-[90vh] flex flex-col"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>{tag ? 'Chỉnh sửa hạng mục' : 'Thêm hạng mục mới'}</SheetTitle>
           <SheetDescription>
@@ -280,3 +279,4 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
     </Sheet>
   );
 }
+

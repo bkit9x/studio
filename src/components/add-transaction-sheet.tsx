@@ -363,8 +363,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction }: AddTr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chọn hạng mục</FormLabel>
-                   <ScrollArea className="w-full whitespace-nowrap -mx-2 px-2">
-                     <div className="flex w-max space-x-2 py-2">
+                   <ScrollArea className="w-full whitespace-nowrap -mx-2 px-4">
+                     <div className="flex w-max space-x-2 py-2 mx-1">
                         {tags
                           .filter(t => transactionType === 'income' ? t.name === 'Thu nhập' : t.name !== 'Thu nhập')
                           .map(tag => (
