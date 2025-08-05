@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, type User } from 'firebase/auth';
 import { app } from '@/lib/firebase/client';
 
 type FirebaseContextType = {
@@ -27,12 +27,20 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Set session persistence
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        // Continue with the auth state listener
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          setUser(user);
+          setIsLoading(false);
+        });
+        return unsubscribe;
+      })
+      .catch((error) => {
+        console.error("Error setting auth persistence:", error);
+        setIsLoading(false);
+      });
   }, [auth]);
 
   const value = {
@@ -47,4 +55,3 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
     </FirebaseContext.Provider>
   );
 };
-
