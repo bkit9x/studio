@@ -6,6 +6,7 @@ export type Wallet = {
   id: string;
   name: string;
   initialBalance: number;
+  createdAt: string;
 };
 
 export type Tag = {
@@ -15,6 +16,7 @@ export type Tag = {
   textColor: string;
   bgColor: string;
   limit?: number; // Monthly spending limit
+  createdAt: string;
 };
 
 export type TransactionType = 'income' | 'expense';
@@ -28,4 +30,5 @@ export type Transaction = {
   description: string;
   createdAt: Date | string; // Allow string for serialization
   sourceWalletId?: string;
+  user_id: string;
 };

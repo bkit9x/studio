@@ -115,8 +115,8 @@ export function useSupabaseData() {
     // Note: Supabase insert doesn't automatically map user_id if called from client
     // unless RLS is set up with a default value. We assume RLS handles this.
     const [walletsRes, tagsRes, transactionsRes] = await Promise.all([
-      supabase.from('wallets').insert(newWallets.map(({id, ...w}) => w)), // Don't insert client-side ID
-      supabase.from('tags').insert(newTags.map(({id, ...t}) => t)),
+      supabase.from('wallets').insert(newWallets.map(({id, createdAt, ...w}) => w)), // Don't insert client-side ID
+      supabase.from('tags').insert(newTags.map(({id, createdAt, ...t}) => t)),
       supabase.from('transactions').insert(newTransactions.map(({id, ...tx}) => ({...tx, createdAt: new Date(tx.createdAt).toISOString()})))
     ]);
 
@@ -148,9 +148,11 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
 
     const addItem = async (item: Partial<T>) => {
         if (!supabase || !user) return;
+        
         const { error } = await supabase.from(table).insert([item]);
         if (error) {
             toast({ variant: 'destructive', title: `Lỗi thêm ${table}`, description: error.message });
+             console.error(`Error adding item to ${table}:`, error);
         } else {
             dispatchDataChangeEvent();
         }
