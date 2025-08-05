@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { format, addDays, subDays } from 'date-fns';
 import { Calendar as CalendarIcon, Wallet, type LucideIcon, icons, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -64,7 +64,7 @@ interface AddTransactionSheetProps {
 }
 
 export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selectedWalletId }: AddTransactionSheetProps) {
-  const { wallets, tags, dispatchDataChangeEvent } = useSupabaseData();
+  const { wallets, tags } = useSupabaseData();
   const { addItem: addTransaction, updateItem: updateTransaction } = useSupabaseTable<Transaction>('transactions');
   const { toast } = useToast();
 
@@ -172,7 +172,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
             });
         }
     }
-    dispatchDataChangeEvent();
     return true;
   }
 

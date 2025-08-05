@@ -37,9 +37,9 @@ export function useSupabaseData() {
         { data: tagsData, error: tagsError },
         { data: transactionsData, error: transactionsError }
       ] = await Promise.all([
-        supabase.from('wallets').select('*'),
-        supabase.from('tags').select('*'),
-        supabase.from('transactions').select('*')
+        supabase.from('wallets').select('*').order('createdAt', { ascending: true }),
+        supabase.from('tags').select('*').order('createdAt', { ascending: true }),
+        supabase.from('transactions').select('*').order('createdAt', { ascending: false })
       ]);
 
       if (walletsError) throw walletsError;
@@ -75,9 +75,10 @@ export function useSupabaseData() {
   
   // Listen for custom data change events to refetch data
   useEffect(() => {
-      window.addEventListener('app-data-change', fetchData);
+      const handleDataChange = () => fetchData();
+      window.addEventListener('app-data-change', handleDataChange);
       return () => {
-          window.removeEventListener('app-data-change', fetchData);
+          window.removeEventListener('app-data-change', handleDataChange);
       };
   }, [fetchData]);
 
@@ -145,9 +146,9 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
     const { supabase, user } = useSupabase();
     const { toast } = useToast();
 
-    const addItem = async (item: Omit<T, 'id' | 'user_id'>) => {
+    const addItem = async (item: Omit<T, 'id' | 'user_id' | 'createdAt'>) => {
         if (!supabase || !user) return;
-        const { error } = await supabase.from(table).insert(item as any);
+        const { error } = await supabase.from(table).insert([item]);
         if (error) {
             toast({ variant: 'destructive', title: `Lỗi thêm ${table}`, description: error.message });
         } else {

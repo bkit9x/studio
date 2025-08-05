@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { icons, type LucideIcon } from 'lucide-react';
 
 import type { Tag } from '@/lib/types';
-import { useSupabaseData, useSupabaseTable } from '@/hooks/use-supabase-data';
+import { useSupabaseTable } from '@/hooks/use-supabase-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -109,7 +109,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
         icon: data.icon as keyof typeof icons,
         textColor: selectedColor.textColor,
         bgColor: selectedColor.bgColor,
-        limit: data.limit || undefined, // Store as undefined if 0 or empty
+        limit: data.limit || null, // Store as null if 0 or empty
     };
     
     if(tag) {
