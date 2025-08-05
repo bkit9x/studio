@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback } from 'react';
 // Custom event to notify other components using the same local storage key
 const dispatchStorageEvent = (key: string, newValue: any) => {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new StorageEvent('storage', { key, newValue: JSON.stringify(newValue) }));
+    // We use a custom event name to avoid conflicts and to signify it's an app-internal event
+    window.dispatchEvent(new CustomEvent(`app-storage-${key}`, { detail: newValue }));
   }
 };
 
@@ -56,10 +57,21 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   
   // Listen for changes to the local storage from other tabs/windows or our custom event
   useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === key && event.newValue) {
+    const handleStorageChange = (event: StorageEvent | CustomEvent) => {
+      let eventKey;
+      let eventNewValue;
+
+      if (event instanceof StorageEvent) {
+          eventKey = event.key;
+          eventNewValue = event.newValue;
+      } else if (event instanceof CustomEvent) {
+          eventKey = key; // Custom event is keyed by its name listener
+          eventNewValue = JSON.stringify(event.detail);
+      }
+
+      if (eventKey === key && eventNewValue) {
         try {
-            setStoredValue(JSON.parse(event.newValue));
+            setStoredValue(JSON.parse(eventNewValue));
         } catch (error) {
             console.warn(`Error parsing storage event value for key "${key}":`, error);
         }
@@ -67,9 +79,12 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     };
 
     if (isClient) {
+      const customEventName = `app-storage-${key}`;
       window.addEventListener('storage', handleStorageChange);
+      window.addEventListener(customEventName, handleStorageChange);
       return () => {
         window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener(customEventName, handleStorageChange);
       };
     }
   }, [key, isClient]);
