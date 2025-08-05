@@ -1,11 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   collection,
   query,
-  where,
   onSnapshot,
   doc,
   addDoc,
@@ -21,13 +20,6 @@ import { useFirebase } from '@/contexts/auth-provider';
 import type { Wallet, Tag, Transaction } from '@/lib/types';
 import { useToast } from './use-toast';
 import { mockTags, mockWallets } from '@/data/mock-data';
-
-// Custom event to notify other components that data has changed
-const dispatchDataChangeEvent = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('app-data-change'));
-  }
-};
 
 const seedInitialData = async (userId: string) => {
     const batch = writeBatch(db);
@@ -58,6 +50,7 @@ export function useFirebaseData() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isSeeding = useRef(false);
 
   const fetchData = useCallback(async () => {
     if (!user) {
@@ -78,16 +71,20 @@ export function useFirebaseData() {
         );
 
         return onSnapshot(q, (querySnapshot) => {
-            if (colName === 'wallets' && querySnapshot.empty) {
-                // If user has no wallets, they are likely new. Seed initial data.
-                seedInitialData(user.uid).catch(err => {
+            if (colName === 'wallets' && querySnapshot.empty && !isSeeding.current) {
+                isSeeding.current = true;
+                seedInitialData(user.uid)
+                .catch(err => {
                     toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: (err as Error).message });
+                })
+                .finally(() => {
+                    // Reset after a short delay to prevent race conditions
+                    setTimeout(() => { isSeeding.current = false; }, 2000); 
                 });
             }
         
             const data = querySnapshot.docs.map(doc => {
                 const docData = doc.data();
-                // Convert Firestore Timestamps to JS Date objects
                 if (docData.createdAt instanceof Timestamp) {
                     docData.createdAt = docData.createdAt.toDate();
                 }
@@ -113,7 +110,6 @@ export function useFirebaseData() {
         });
     });
 
-    // Cleanup function
     return () => unsubscribes.forEach(unsub => unsub());
 
   }, [user, toast]);
@@ -132,7 +128,6 @@ export function useFirebaseData() {
     transactions.forEach(tx => batch.delete(doc(db, `users/${user.uid}/transactions`, tx.id)));
     
     await batch.commit();
-    // Snapshot listener will update the UI automatically
   };
 
   const bulkInsert = async (
@@ -163,7 +158,6 @@ export function useFirebaseData() {
     });
 
     await batch.commit();
-    // Snapshot listener will update the UI
   };
 
   return { wallets, tags, transactions, isLoading, clearAllData, bulkInsert };
