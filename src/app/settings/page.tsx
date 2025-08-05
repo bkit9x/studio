@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useFirebaseData } from "@/hooks/use-firebase-data";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
+import { format as formatDate } from 'date-fns';
 
 
 const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
@@ -63,16 +64,18 @@ export default function SettingsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } else { // CSV
+        const escapeCsvCell = (cell: any) => `"${String(cell).replace(/"/g, '""')}"`;
+        
         const rows = [
-            ['ID', 'Date', 'Wallet', 'Type', 'Category', 'Amount', 'Description'],
+            ['ID', 'Date', 'Wallet', 'Type', 'Category', 'Amount', 'Description'].map(escapeCsvCell).join(','),
             ...transactions.map(t => [
-                t.id,
-                t.createdAt,
-                wallets.find(w => w.id === t.walletId)?.name || '',
-                t.type,
-                tags.find(tag => tag.id === t.tagId)?.name || '',
-                t.amount,
-                t.description
+                escapeCsvCell(t.id),
+                escapeCsvCell(formatDate(new Date(t.createdAt as string), 'dd/MM/yyyy HH:mm:ss')),
+                escapeCsvCell(wallets.find(w => w.id === t.walletId)?.name || ''),
+                escapeCsvCell(t.type),
+                escapeCsvCell(tags.find(tag => tag.id === t.tagId)?.name || ''),
+                escapeCsvCell(t.amount),
+                escapeCsvCell(t.description)
             ].join(','))
         ];
         const csvContent = rows.join('\n');
