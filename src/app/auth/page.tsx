@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ const GoogleIcon = () => (
 
 
 export default function AuthPage() {
-  const { auth } = useFirebase();
+  const { auth, isProcessingRedirect } = useFirebase();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,22 +101,15 @@ export default function AuthPage() {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
-        const userCredential = await signInWithPopup(auth, provider);
-        const additionalInfo = getAdditionalUserInfo(userCredential);
-        
-        if (additionalInfo?.isNewUser) {
-            await seedInitialDataForUser(userCredential.user.uid);
-            toast({ title: 'Chào mừng bạn!', description: 'Tài khoản của bạn đã được tạo.' });
-        } else {
-            toast({ title: 'Chào mừng trở lại!', description: 'Đã đăng nhập thành công.' });
-        }
-        router.push('/');
+        // We use signInWithRedirect, the result is handled in the AuthProvider
+        await signInWithRedirect(auth, provider);
     } catch (error) {
         toast({ variant: 'destructive', title: 'Đăng nhập Google thất bại', description: (error as Error).message });
-    } finally {
         setIsSubmitting(false);
     }
   }
+
+  const isPageBusy = isSubmitting || isProcessingRedirect;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted p-4">
@@ -124,7 +117,7 @@ export default function AuthPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold tracking-tight text-primary">FinTrack</CardTitle>
           <CardDescription>
-            {isSent ? 'Kiểm tra hộp thư của bạn' : 'Đăng nhập hoặc đăng ký để tiếp tục'}
+            {isPageBusy ? 'Đang xử lý...' : isSent ? 'Kiểm tra hộp thư của bạn' : 'Đăng nhập hoặc đăng ký để tiếp tục'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -135,7 +128,7 @@ export default function AuthPage() {
              </div>
           ) : (
           <>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isPageBusy}>
                 <GoogleIcon /> Đăng nhập với Google
             </Button>
 
@@ -155,11 +148,11 @@ export default function AuthPage() {
                     <FormField control={form.control} name="password" render={({ field }) => (
                         <FormItem><FormLabel>Mật khẩu</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang xử lý...' : 'Đăng nhập'}
+                    <Button type="submit" className="w-full" disabled={isPageBusy}>
+                        {isPageBusy ? 'Đang xử lý...' : 'Đăng nhập'}
                     </Button>
                     </form>
-                    <Button variant="link" className="w-full px-0 font-normal text-sm mt-2" onClick={handlePasswordReset} disabled={isSubmitting}>
+                    <Button variant="link" className="w-full px-0 font-normal text-sm mt-2" onClick={handlePasswordReset} disabled={isPageBusy}>
                         Quên mật khẩu?
                     </Button>
                 </TabsContent>
@@ -171,8 +164,8 @@ export default function AuthPage() {
                     <FormField control={form.control} name="password" render={({ field }) => (
                         <FormItem><FormLabel>Mật khẩu</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang xử lý...' : 'Đăng ký'}
+                    <Button type="submit" className="w-full" disabled={isPageBusy}>
+                        {isPageBusy ? 'Đang xử lý...' : 'Đăng ký'}
                     </Button>
                     </form>
                 </TabsContent>
@@ -185,5 +178,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
-    
