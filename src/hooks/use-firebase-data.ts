@@ -14,6 +14,7 @@ import {
   serverTimestamp,
   orderBy,
   Timestamp,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useFirebase } from '@/contexts/auth-provider';
@@ -21,17 +22,23 @@ import type { Wallet, Tag, Transaction } from '@/lib/types';
 import { useToast } from './use-toast';
 import { mockTags, mockWallets } from '@/data/mock-data';
 
-const seedInitialData = async (userId: string) => {
+export const seedInitialDataForUser = async (userId: string) => {
+    // Check if data already exists to be absolutely sure
+    const walletsCheckRef = collection(db, `users/${userId}/wallets`);
+    const walletsCheckSnapshot = await getDocs(query(walletsCheckRef));
+    if (!walletsCheckSnapshot.empty) {
+      console.log("Data already exists for this user. Skipping seed.");
+      return;
+    }
+
     const batch = writeBatch(db);
 
-    // Seed Wallets
     mockWallets.forEach(wallet => {
         const { id, ...rest } = wallet;
         const walletRef = doc(collection(db, `users/${userId}/wallets`));
         batch.set(walletRef, { ...rest, createdAt: serverTimestamp() });
     });
 
-    // Seed Tags
     mockTags.forEach(tag => {
         const { id, ...rest } = tag;
         const tagRef = doc(collection(db, `users/${userId}/tags`));
@@ -50,7 +57,6 @@ export function useFirebaseData() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const isSeeding = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -76,23 +82,10 @@ export function useFirebaseData() {
                 return { id: doc.id, ...docData } as any;
             });
             
-            if (colName === 'wallets') {
-                setWallets(data);
-                if (querySnapshot.docs.length === 0 && !isSeeding.current) {
-                    isSeeding.current = true;
-                    seedInitialData(user.uid)
-                        .catch(err => {
-                             toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: (err as Error).message });
-                        })
-                        .finally(() => {
-                           setTimeout(() => { isSeeding.current = false; }, 2000);
-                        });
-                }
-            } else if (colName === 'tags') {
-                setTags(data);
-            } else if (colName === 'transactions') {
-                setTransactions(data);
-            }
+            if (colName === 'wallets') setWallets(data);
+            if (colName === 'tags') setTags(data);
+            if (colName === 'transactions') setTransactions(data);
+
             setIsLoading(false);
 
         }, (error) => {
@@ -146,6 +139,7 @@ export function useFirebaseData() {
     });
 
     await batch.commit();
+    await seedInitialDataForUser(user.uid);
   };
 
   return { wallets, tags, transactions, isLoading, clearAllData, bulkInsert };

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/contexts/auth-provider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { seedInitialDataForUser } from '@/hooks/use-firebase-data';
 
 
 const authSchema = z.object({
@@ -52,7 +53,13 @@ export default function AuthPage() {
   const handleSignup = async (data: AuthFormValues) => {
     setIsSubmitting(true);
      try {
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const additionalInfo = getAdditionalUserInfo(userCredential);
+
+        if (additionalInfo?.isNewUser) {
+          await seedInitialDataForUser(userCredential.user.uid);
+        }
+
         toast({ title: 'Đăng ký thành công', description: 'Chào mừng bạn đến với FinTrack!' });
         router.push('/');
     } catch (error) {
