@@ -38,20 +38,7 @@ export function useSupabaseData() {
         .order('createdAt', { ascending: true });
 
       if (walletsError) throw walletsError;
-
-      // If user has no wallets, seed initial data for them
-      if (walletsData.length === 0) {
-        const { error: seedError } = await supabase.rpc('seed_initial_data');
-        if (seedError) {
-            console.error("Error seeding data:", seedError);
-            toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: seedError.message });
-        } else {
-            // Refetch after seeding
-            fetchData();
-            return;
-        }
-      }
-
+      
       const [
         { data: tagsData, error: tagsError },
         { data: transactionsData, error: transactionsError }
