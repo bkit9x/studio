@@ -7,18 +7,16 @@ import { useSupabase } from '@/contexts/auth-provider';
 import { Skeleton } from '../ui/skeleton';
 
 const AUTH_ROUTES = ['/auth'];
-const PUBLIC_ROUTES = ['/']; // Adjust if you have more public routes
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { session, isLoading } = useSupabase();
+  const { supabase, session, isLoading } = useSupabase();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !supabase) return;
 
     const isAuthRoute = AUTH_ROUTES.includes(pathname);
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) && !isAuthRoute;
 
     if (!session && !isAuthRoute) {
       router.push('/auth');
@@ -27,7 +25,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (session && isAuthRoute) {
       router.push('/');
     }
-  }, [session, isLoading, router, pathname]);
+  }, [session, isLoading, router, pathname, supabase]);
 
   if (isLoading) {
     return (
@@ -41,6 +39,20 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  // If Supabase is not configured, we might show a message or just the children (which could be the login page)
+  if (!supabase) {
+      // You can add a message here to prompt the user to configure Supabase
+       if (AUTH_ROUTES.includes(pathname)) {
+        return <>{children}</>;
+       }
+       // Redirect to auth page if not configured and not on it
+       if (!AUTH_ROUTES.includes(pathname)) {
+           router.push('/auth');
+       }
+       return null; // Or a loading/configuration needed screen
+  }
+
 
   // If on an auth route, don't show the main layout, just the auth page children
   if (AUTH_ROUTES.includes(pathname)) {

@@ -6,7 +6,7 @@ import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
 type SupabaseContextType = {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   session: Session | null;
   user: User | null;
   isLoading: boolean;
@@ -22,12 +22,27 @@ export const useSupabase = () => {
   return context;
 };
 
+const isSupabaseConfigured = () => {
+    return (
+        process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL' &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY'
+    );
+};
+
+
 export const SupabaseProvider = ({ children }: { children: React.ReactNode }) => {
-  const [supabase] = useState(() => createClient());
+  const [supabase] = useState(() => isSupabaseConfigured() ? createClient() : null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+        setIsLoading(false);
+        return;
+    }
+  
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
@@ -43,7 +58,7 @@ export const SupabaseProvider = ({ children }: { children: React.ReactNode }) =>
     );
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, [supabase]);
 

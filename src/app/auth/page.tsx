@@ -13,6 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useSupabase } from '@/contexts/auth-provider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 const authSchema = z.object({
   email: z.string().email({ message: "Email không hợp lệ." }),
@@ -20,6 +22,16 @@ const authSchema = z.object({
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
+
+const SupabaseNotConfiguredAlert = () => (
+    <Alert>
+        <Terminal className="h-4 w-4" />
+        <AlertTitle>Cảnh báo cấu hình</AlertTitle>
+        <AlertDescription>
+            Supabase chưa được cấu hình. Vui lòng cập nhật tệp `.env.local` với URL và khóa API của bạn để bật tính năng xác thực.
+        </AlertDescription>
+    </Alert>
+);
 
 export default function AuthPage() {
   const { supabase } = useSupabase();
@@ -34,6 +46,7 @@ export default function AuthPage() {
   });
   
   const handleLogin = async (data: AuthFormValues) => {
+    if (!supabase) return;
     setIsSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword(data);
     if (error) {
@@ -41,11 +54,13 @@ export default function AuthPage() {
     } else {
       toast({ title: 'Thành công!', description: 'Đã đăng nhập thành công.' });
       router.push('/');
+      router.refresh();
     }
     setIsSubmitting(false);
   };
 
   const handleSignup = async (data: AuthFormValues) => {
+    if (!supabase) return;
     setIsSubmitting(true);
     const { error } = await supabase.auth.signUp(data);
     if (error) {
@@ -58,6 +73,7 @@ export default function AuthPage() {
   };
   
   const handleMagicLink = async () => {
+    if (!supabase) return;
     const email = form.getValues('email');
     if (!email) {
         form.setError('email', { type: 'manual', message: 'Vui lòng nhập email.'});
@@ -90,7 +106,8 @@ export default function AuthPage() {
             {isSent ? 'Kiểm tra hộp thư của bạn' : 'Đăng nhập hoặc đăng ký để tiếp tục'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {!supabase && <SupabaseNotConfiguredAlert />}
           {isSent ? (
              <div className="text-center">
                 <p>Một email đã được gửi đến <span className="font-bold">{form.getValues('email')}</span>.</p>
@@ -99,8 +116,8 @@ export default function AuthPage() {
           ) : (
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Đăng nhập</TabsTrigger>
-              <TabsTrigger value="signup">Đăng ký</TabsTrigger>
+              <TabsTrigger value="login" disabled={!supabase}>Đăng nhập</TabsTrigger>
+              <TabsTrigger value="signup" disabled={!supabase}>Đăng ký</TabsTrigger>
             </TabsList>
             <Form {...form}>
               <TabsContent value="login">
@@ -111,12 +128,12 @@ export default function AuthPage() {
                   <FormField control={form.control} name="password" render={({ field }) => (
                     <FormItem><FormLabel>Mật khẩu</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !supabase}>
                     {isSubmitting ? 'Đang xử lý...' : 'Đăng nhập'}
                   </Button>
                 </form>
                 <div className="relative my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Hoặc</span></div></div>
-                <Button variant="outline" className="w-full" onClick={handleMagicLink} disabled={isSubmitting}>
+                <Button variant="outline" className="w-full" onClick={handleMagicLink} disabled={isSubmitting || !supabase}>
                     Đăng nhập với Magic Link
                 </Button>
               </TabsContent>
@@ -128,7 +145,7 @@ export default function AuthPage() {
                   <FormField control={form.control} name="password" render={({ field }) => (
                     <FormItem><FormLabel>Mật khẩu</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !supabase}>
                      {isSubmitting ? 'Đang xử lý...' : 'Đăng ký'}
                   </Button>
                 </form>
@@ -141,4 +158,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
