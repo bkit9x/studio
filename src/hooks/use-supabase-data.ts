@@ -39,6 +39,19 @@ export function useSupabaseData() {
 
       if (walletsError) throw walletsError;
       
+      // If user has no wallets, they are likely new. Seed initial data.
+      if (walletsData && walletsData.length === 0) {
+        const { error: seedError } = await supabase.rpc('seed_initial_data');
+        if (seedError) {
+            console.error("Error seeding data:", seedError);
+            toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: seedError.message });
+        } else {
+            // Refetch after seeding
+            await fetchData();
+            return;
+        }
+      }
+
       const [
         { data: tagsData, error: tagsError },
         { data: transactionsData, error: transactionsError }

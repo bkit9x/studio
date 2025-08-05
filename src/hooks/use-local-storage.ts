@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -31,17 +32,34 @@ export function useSupabaseData() {
     
     setIsLoading(true);
     try {
+      const { data: walletsData, error: walletsError } = await supabase
+        .from('wallets')
+        .select('*')
+        .order('createdAt', { ascending: true });
+
+      if (walletsError) throw walletsError;
+      
+      // If user has no wallets, they are likely new. Seed initial data.
+      if (walletsData && walletsData.length === 0) {
+        const { error: seedError } = await supabase.rpc('seed_initial_data');
+        if (seedError) {
+            console.error("Error seeding data:", seedError);
+            toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: seedError.message });
+        } else {
+            // Refetch after seeding
+            await fetchData();
+            return;
+        }
+      }
+
       const [
-        { data: walletsData, error: walletsError },
         { data: tagsData, error: tagsError },
         { data: transactionsData, error: transactionsError }
       ] = await Promise.all([
-        supabase.from('wallets').select('*'),
-        supabase.from('tags').select('*'),
-        supabase.from('transactions').select('*')
+        supabase.from('tags').select('*').order('createdAt', { ascending: true }),
+        supabase.from('transactions').select('*').order('createdAt', { ascending: false })
       ]);
 
-      if (walletsError) throw walletsError;
       if (tagsError) throw tagsError;
       if (transactionsError) throw transactionsError;
 
@@ -74,9 +92,10 @@ export function useSupabaseData() {
   
   // Listen for custom data change events to refetch data
   useEffect(() => {
-      window.addEventListener('app-data-change', fetchData);
+      const handleDataChange = () => fetchData();
+      window.addEventListener('app-data-change', handleDataChange);
       return () => {
-          window.removeEventListener('app-data-change', fetchData);
+          window.removeEventListener('app-data-change', handleDataChange);
       };
   }, [fetchData]);
 
@@ -86,15 +105,9 @@ export function useSupabaseData() {
     if (!supabase || !user) throw new Error("User not authenticated");
     
     // The RLS policy should handle deleting only the user's data
-    const [walletsRes, tagsRes, transactionsRes] = await Promise.all([
-        supabase.from('wallets').delete().neq('id', '0'), // Dummy condition to delete all matching rows
-        supabase.from('tags').delete().neq('id', '0'),
-        supabase.from('transactions').delete().neq('id', '0')
-    ]);
-
-    if (walletsRes.error) throw walletsRes.error;
-    if (tagsRes.error) throw tagsRes.error;
-    if (transactionsRes.error) throw transactionsRes.error;
+    await supabase.from('transactions').delete().neq('id', '0');
+    await supabase.from('tags').delete().neq('id', '0');
+    await supabase.from('wallets').delete().neq('id', '0');
 
     // Refetch data after clearing
     dispatchDataChangeEvent();
@@ -110,12 +123,15 @@ export function useSupabaseData() {
 
     await clearAllData();
     
-    // Note: Supabase insert doesn't automatically map user_id if called from client
-    // unless RLS is set up with a default value. We assume RLS handles this.
+    // RLS will add user_id. We strip client-side ids.
+    const walletsToInsert = newWallets.map(({id, createdAt, ...w}) => w)
+    const tagsToInsert = newTags.map(({id, createdAt, ...t}) => t)
+    const transactionsToInsert = newTransactions.map(({id, ...tx}) => ({...tx, createdAt: new Date(tx.createdAt).toISOString()}));
+
     const [walletsRes, tagsRes, transactionsRes] = await Promise.all([
-      supabase.from('wallets').insert(newWallets.map(({id, ...w}) => w)), // Don't insert client-side ID
-      supabase.from('tags').insert(newTags.map(({id, ...t}) => t)),
-      supabase.from('transactions').insert(newTransactions.map(({id, ...tx}) => ({...tx, createdAt: new Date(tx.createdAt).toISOString()})))
+      supabase.from('wallets').insert(walletsToInsert),
+      supabase.from('tags').insert(tagsToInsert),
+      supabase.from('transactions').insert(transactionsToInsert)
     ]);
 
     if (walletsRes.error) throw walletsRes.error;
@@ -144,11 +160,13 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
     const { supabase, user } = useSupabase();
     const { toast } = useToast();
 
-    const addItem = async (item: Omit<T, 'id' | 'user_id'>) => {
+    const addItem = async (item: Partial<T>) => {
         if (!supabase || !user) return;
-        const { error } = await supabase.from(table).insert(item as any);
+        
+        const { error } = await supabase.from(table).insert([item]);
         if (error) {
             toast({ variant: 'destructive', title: `Lỗi thêm ${table}`, description: error.message });
+             console.error(`Error adding item to ${table}:`, error);
         } else {
             dispatchDataChangeEvent();
         }
