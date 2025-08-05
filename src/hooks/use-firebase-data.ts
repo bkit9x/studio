@@ -52,7 +52,7 @@ export function useFirebaseData() {
   const [isLoading, setIsLoading] = useState(true);
   const isSeeding = useRef(false);
 
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
     if (!user) {
       setWallets([]);
       setTags([]);
@@ -60,30 +60,15 @@ export function useFirebaseData() {
       setIsLoading(false);
       return;
     }
-    
-    setIsLoading(true);
 
-    const collections = ['wallets', 'tags', 'transactions'];
-    const unsubscribes = collections.map(colName => {
+    const unsubscribes = ['wallets', 'tags', 'transactions'].map(colName => {
         const q = query(
             collection(db, `users/${user.uid}/${colName}`), 
             orderBy('createdAt', colName === 'transactions' ? 'desc' : 'asc')
         );
 
         return onSnapshot(q, (querySnapshot) => {
-            if (colName === 'wallets' && querySnapshot.empty && !isSeeding.current) {
-                isSeeding.current = true;
-                seedInitialData(user.uid)
-                .catch(err => {
-                    toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: (err as Error).message });
-                })
-                .finally(() => {
-                    // Reset after a short delay to prevent race conditions
-                    setTimeout(() => { isSeeding.current = false; }, 2000); 
-                });
-            }
-        
-            const data = querySnapshot.docs.map(doc => {
+             const data = querySnapshot.docs.map(doc => {
                 const docData = doc.data();
                 if (docData.createdAt instanceof Timestamp) {
                     docData.createdAt = docData.createdAt.toDate();
@@ -91,18 +76,25 @@ export function useFirebaseData() {
                 return { id: doc.id, ...docData } as any;
             });
             
-            switch (colName) {
-                case 'wallets':
-                    setWallets(data);
-                    break;
-                case 'tags':
-                    setTags(data);
-                    break;
-                case 'transactions':
-                    setTransactions(data);
-                    break;
+            if (colName === 'wallets') {
+                setWallets(data);
+                if (querySnapshot.docs.length === 0 && !isSeeding.current) {
+                    isSeeding.current = true;
+                    seedInitialData(user.uid)
+                        .catch(err => {
+                             toast({ variant: 'destructive', title: 'Lỗi tạo dữ liệu mẫu', description: (err as Error).message });
+                        })
+                        .finally(() => {
+                           setTimeout(() => { isSeeding.current = false; }, 2000);
+                        });
+                }
+            } else if (colName === 'tags') {
+                setTags(data);
+            } else if (colName === 'transactions') {
+                setTransactions(data);
             }
             setIsLoading(false);
+
         }, (error) => {
             console.error(`Error fetching ${colName}:`, error);
             toast({ variant: 'destructive', title: `Lỗi tải ${colName}`, description: error.message });
@@ -113,10 +105,6 @@ export function useFirebaseData() {
     return () => unsubscribes.forEach(unsub => unsub());
 
   }, [user, toast]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
   
   const clearAllData = async () => {
     if (!user) throw new Error("User not authenticated");
