@@ -110,8 +110,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
 
   const saveTransaction = async (data: TransactionFormValues): Promise<boolean> => {
+     const transactionData = {
+        ...data,
+        sourceWalletId: data.sourceWalletId || null, // Convert undefined to null for Firestore
+     };
+     
      if (isEditMode && transaction) {
-        const { type, ...updates } = data; // cannot update type
+        const { type, ...updates } = transactionData; // cannot update type
         await updateTransaction(transaction.id, {
             ...updates,
         });
@@ -120,10 +125,10 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
             description: "Đã cập nhật giao dịch.",
         });
     } else {
-        if (data.type === 'income' && data.sourceWalletId && data.sourceWalletId !== 'none' && data.sourceWalletId !== data.walletId) {
+        if (transactionData.type === 'income' && transactionData.sourceWalletId && transactionData.sourceWalletId !== 'none' && transactionData.sourceWalletId !== transactionData.walletId) {
             // Transfer between wallets
-            const sourceWallet = wallets.find(w => w.id === data.sourceWalletId);
-            const destinationWallet = wallets.find(w => w.id === data.walletId);
+            const sourceWallet = wallets.find(w => w.id === transactionData.sourceWalletId);
+            const destinationWallet = wallets.find(w => w.id === transactionData.walletId);
             const transferTag = tags.find(t => t.name === 'Chuyển khoản') || tags[0];
 
             if (!sourceWallet || !destinationWallet) {
@@ -133,22 +138,22 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
             const expenseTransaction = {
                 type: 'expense' as TransactionType,
-                amount: data.amount,
+                amount: transactionData.amount,
                 description: `Chuyển tiền đến ${destinationWallet.name}`,
                 tagId: transferTag.id,
                 walletId: sourceWallet.id,
-                createdAt: data.createdAt,
-                sourceWalletId: data.sourceWalletId,
+                createdAt: transactionData.createdAt,
+                sourceWalletId: transactionData.sourceWalletId,
             };
 
             const incomeTransaction = {
                 type: 'income' as TransactionType,
-                amount: data.amount,
+                amount: transactionData.amount,
                 description: `Nhận tiền từ ${sourceWallet.name}`,
-                tagId: data.tagId,
-                walletId: data.walletId,
-                createdAt: data.createdAt,
-                sourceWalletId: data.sourceWalletId,
+                tagId: transactionData.tagId,
+                walletId: transactionData.walletId,
+                createdAt: transactionData.createdAt,
+                sourceWalletId: transactionData.sourceWalletId,
             };
 
             await addTransaction(expenseTransaction);
@@ -161,7 +166,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
         } else {
             // Regular income/expense
-            await addTransaction(data);
+            await addTransaction(transactionData);
             toast({
               title: "Thành công!",
               description: "Đã thêm giao dịch mới.",
