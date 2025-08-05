@@ -1,0 +1,14 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to read and write only their own data.
+    // The wildcard {userId} captures the user's ID from the path.
+    // The rule checks if the authenticated user's ID (request.auth.uid)
+    // matches the userId in the document path.
+    match /users/{userId}/{document=**} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
