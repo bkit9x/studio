@@ -146,7 +146,7 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
     const { supabase, user } = useSupabase();
     const { toast } = useToast();
 
-    const addItem = async (item: Omit<T, 'id' | 'user_id' | 'createdAt'>) => {
+    const addItem = async (item: Partial<T>) => {
         if (!supabase || !user) return;
         const { error } = await supabase.from(table).insert([item]);
         if (error) {
@@ -188,4 +188,3 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
 
     return { addItem, updateItem, deleteItem, bulkDelete };
 }
-
