@@ -1,8 +1,11 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { Toaster } from "@/components/ui/toaster";
+import { SupabaseProvider } from '@/contexts/auth-provider';
+import AuthGuard from '@/components/layout/auth-guard';
 
 export const metadata: Metadata = {
   title: 'FinTrack - Quản lý chi tiêu',
@@ -28,11 +31,15 @@ export default function RootLayout({
       <body className={cn(
           "min-h-screen bg-background font-body antialiased"
       )}>
-        <div className="relative flex min-h-screen flex-col">
-          <main className="flex-1 pb-24">{children}</main>
-        </div>
-        <BottomNav />
-        <Toaster />
+        <SupabaseProvider>
+            <AuthGuard>
+                <div className="relative flex min-h-screen flex-col">
+                  <main className="flex-1 pb-24">{children}</main>
+                </div>
+                <BottomNav />
+                <Toaster />
+            </AuthGuard>
+        </SupabaseProvider>
       </body>
     </html>
   );

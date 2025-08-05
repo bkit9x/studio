@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, LogOut, Upload, Download, RefreshCw, AlertTriangle, Cloud, FileJson, FileText } from "lucide-react";
@@ -26,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { mockWallets, mockTags, mockTransactions } from "@/data/mock-data";
 import { SyncDialog } from "@/components/settings/sync-dialog";
+import { useSupabase } from "@/contexts/auth-provider";
 
 
 const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
@@ -43,6 +45,8 @@ const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClic
 }
 
 export default function SettingsPage() {
+  const { supabase, user } = useSupabase();
+  const router = useRouter();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const { toast } = useToast();
@@ -158,10 +162,17 @@ export default function SettingsPage() {
     localStorage.removeItem("tags");
     localStorage.removeItem("transactions");
     localStorage.removeItem("selectedWalletId");
-    localStorage.removeItem(SYNC_CONFIG_KEY);
-    localStorage.removeItem(SYNC_METADATA_KEY);
+    localStorage.removeItem("fintrack_sync_config");
+    localStorage.removeItem("fintrack_sync_metadata");
     window.location.reload();
   };
+  
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    // Clear local storage on sign out
+    localStorage.clear();
+    router.push('/auth');
+  }
 
 
   return (
@@ -175,10 +186,10 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
             <CardTitle className="text-xl">Tài khoản</CardTitle>
-            <CardDescription>user@example.com</CardDescription>
+            <CardDescription>{user?.email ?? 'Đang tải...'}</CardDescription>
         </CardHeader>
         <CardContent>
-            <Button variant="destructive" className="w-full">
+            <Button variant="destructive" className="w-full" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" /> Đăng xuất
             </Button>
         </CardContent>
