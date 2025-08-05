@@ -4,14 +4,15 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  "projectId": "fintrack-z0ep9",
-  "appId": "1:897573284249:web:bf1e8c764491d253804b08",
-  "storageBucket": "fintrack-z0ep9.firebasestorage.app",
-  "apiKey": "AIzaSyCy6CjM08YPJqBw4i9ZrM3TV5BwV6zG2E4",
-  "authDomain": "fintrack-z0ep9.firebaseapp.com",
-  "measurementId": "G-5G65GXP6V8",
-  "messagingSenderId": "897573284249"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
+
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
