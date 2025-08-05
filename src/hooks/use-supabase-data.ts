@@ -112,12 +112,15 @@ export function useSupabaseData() {
 
     await clearAllData();
     
-    // Note: Supabase insert doesn't automatically map user_id if called from client
-    // unless RLS is set up with a default value. We assume RLS handles this.
+    // RLS will add user_id. We strip client-side ids.
+    const walletsToInsert = newWallets.map(({id, createdAt, ...w}) => w)
+    const tagsToInsert = newTags.map(({id, createdAt, ...t}) => t)
+    const transactionsToInsert = newTransactions.map(({id, ...tx}) => ({...tx, createdAt: new Date(tx.createdAt).toISOString()}));
+
     const [walletsRes, tagsRes, transactionsRes] = await Promise.all([
-      supabase.from('wallets').insert(newWallets.map(({id, createdAt, ...w}) => w)), // Don't insert client-side ID
-      supabase.from('tags').insert(newTags.map(({id, createdAt, ...t}) => t)),
-      supabase.from('transactions').insert(newTransactions.map(({id, ...tx}) => ({...tx, createdAt: new Date(tx.createdAt).toISOString()})))
+      supabase.from('wallets').insert(walletsToInsert),
+      supabase.from('tags').insert(tagsToInsert),
+      supabase.from('transactions').insert(transactionsToInsert)
     ]);
 
     if (walletsRes.error) throw walletsRes.error;
