@@ -188,3 +188,4 @@ export function useSupabaseTable<T extends { id: string, [key: string]: any }> (
 
     return { addItem, updateItem, deleteItem, bulkDelete };
 }
+
