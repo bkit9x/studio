@@ -27,7 +27,7 @@ import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 
 const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
     // Renders a div, but can be a button if an onClick handler is provided.
-    const Component = asChild ? 'span' : (onClick ? 'button' : 'div');
+    const Component = asChild ? 'span' : 'div';
     return (
     <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
@@ -50,7 +50,7 @@ export default function SettingsPage() {
   const [importFileContent, setImportFileContent] = useState<{
     wallets: Omit<Wallet, 'id' | 'createdAt'>[];
     tags: Omit<Tag, 'id' | 'createdAt'>[];
-    transactions: Omit<Transaction, 'id' | 'createdAt'>[];
+    transactions: Omit<Transaction, 'id'>[];
   } | null>(null);
 
 
@@ -222,11 +222,14 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger className="w-full">
-                 <SettingsItem>
-                    <Download className="h-5 w-5 text-muted-foreground" />
-                    <span>Xuất dữ liệu</span>
-                </SettingsItem>
+             <DropdownMenuTrigger asChild>
+                <div className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left">
+                    <div className="flex items-center gap-3">
+                        <Download className="h-5 w-5 text-muted-foreground" />
+                        <span>Xuất dữ liệu</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
               <DropdownMenuItem onClick={() => handleExport('json')}>
@@ -297,3 +300,4 @@ export default function SettingsPage() {
     </>
   );
 }
+
