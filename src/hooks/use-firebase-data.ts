@@ -121,7 +121,7 @@ export function useFirebaseData() {
   const bulkInsert = async (
     newWallets: Omit<Wallet, 'id' | 'createdAt'>[],
     newTags: Omit<Tag, 'id' | 'createdAt'>[],
-    newTransactions: Omit<Transaction, 'id' | 'createdAt'>[]
+    newTransactions: Omit<Transaction, 'id'>[]
   ) => {
     if (!user) throw new Error("User not authenticated");
 
@@ -144,25 +144,27 @@ export function useFirebaseData() {
     newTransactions.forEach(transaction => {
         const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
         
-        let createdAtDate: Date;
         const rawDate = transaction.createdAt;
+        let createdAtDate: Date;
 
-        if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
-            // It's a Firestore Timestamp-like object from JSON
-            createdAtDate = new Timestamp(rawDate.seconds, rawDate.nanoseconds).toDate();
-        } else if (typeof rawDate === 'string') {
-            // It's an ISO string
+        if (typeof rawDate === 'string') {
             createdAtDate = new Date(rawDate);
+        } else if (rawDate instanceof Timestamp) {
+            createdAtDate = rawDate.toDate();
+        } else if (rawDate instanceof Date) {
+            createdAtDate = rawDate;
+        } else if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
+            createdAtDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds).toDate();
         } else {
-            // Fallback to now if data is missing or invalid
-            createdAtDate = new Date();
+            createdAtDate = new Date(); // Fallback
         }
         
-        const transactionData = {
+        const transactionDataWithDate = {
             ...transaction,
-            createdAt: createdAtDate,
+            createdAt: createdAtDate, // Use the converted Date object
         };
-        batch.set(transactionRef, transactionData);
+
+        batch.set(transactionRef, transactionDataWithDate);
     });
     
     await batch.commit();
