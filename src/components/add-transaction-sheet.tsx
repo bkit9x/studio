@@ -121,7 +121,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
 
   const saveTransaction = async (data: TransactionFormValues): Promise<boolean> => {
-     const isTransfer = tags.find(t => t.id === data.tagId)?.name === 'Chuyển khoản';
+     const selectedTagName = tags.find(t => t.id === data.tagId)?.name;
+     const isTransfer = selectedTagName === 'Chuyển khoản' || selectedTagName === 'Nhận tiền';
 
      if (isTransfer && !data.peerWalletId) {
         form.setError("peerWalletId", { type: "manual", message: "Vui lòng chọn ví đối ứng." });
@@ -134,6 +135,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
         const { type, peerWalletId, ...updates } = data; // Cannot update type or transfer details
         await updateTransaction(transaction.id, {
             ...updates,
+            sourceWalletId: null, // Clear any legacy transfer link
         });
         toast({
             title: "Thành công!",
@@ -169,6 +171,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
             tagId: transferExpenseTag.id,
             walletId: sourceWallet.id,
             createdAt: data.createdAt,
+            sourceWalletId: null
         });
 
         // Create income to destination wallet
@@ -179,6 +182,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
             tagId: transferIncomeTag.id,
             walletId: destinationWallet.id,
             createdAt: data.createdAt,
+            sourceWalletId: null
         });
 
         toast({
@@ -189,7 +193,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
     } else {
         // Regular income/expense
         const { peerWalletId, ...transactionData } = data;
-        await addTransaction(transactionData);
+        await addTransaction({...transactionData, sourceWalletId: null});
         toast({
           title: "Thành công!",
           description: "Đã thêm giao dịch mới.",
@@ -219,7 +223,9 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
   const transactionType = form.watch('type');
   const selectedTagId = form.watch('tagId');
-  const isTransferSelected = tags.find(t => t.id === selectedTagId)?.name === 'Chuyển khoản';
+  
+  const selectedTagName = tags.find(t => t.id === selectedTagId)?.name;
+  const isTransferSelected = selectedTagName === 'Chuyển khoản' || selectedTagName === 'Nhận tiền';
   
   const handleDateChange = (days: number) => {
     const currentDate = form.getValues('createdAt');
@@ -391,9 +397,9 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                                 isSelected={field.value === tag.id}
                                 onClick={() => {
                                     // Prevent changing tag for edited transactions
-                                    if(isEditMode) return;
+                                    if(isEditMode && (tag.name === 'Chuyển khoản' || tag.name === 'Nhận tiền')) return;
                                     field.onChange(tag.id);
-                                    if (tag.name !== 'Chuyển khoản') {
+                                    if (tag.name !== 'Chuyển khoản' && tag.name !== 'Nhận tiền') {
                                         form.setValue('peerWalletId', undefined);
                                     }
                                 }}
