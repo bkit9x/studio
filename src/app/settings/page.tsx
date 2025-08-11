@@ -24,10 +24,9 @@ import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { format as formatDate, isValid } from 'date-fns';
 
 
-const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
-    const Comp = asChild ? "div" : "button";
+const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
     return (
-    <Comp
+    <button
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
@@ -35,7 +34,7 @@ const SettingsItem = ({ children, onClick, asChild = false }: { children: React.
          {children}
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </Comp>
+    </button>
     )
 }
 
@@ -69,8 +68,13 @@ export default function SettingsPage() {
         const rows = [
             ['ID', 'Date', 'Wallet', 'Type', 'Category', 'Amount', 'Description'].map(escapeCsvCell).join(','),
             ...transactions.map(t => {
-                const date = t.createdAt ? new Date(t.createdAt as string) : null;
-                const formattedDate = date && isValid(date) ? formatDate(date, 'dd/MM/yyyy HH:mm:ss') : '';
+                let formattedDate = '';
+                if (t.createdAt) {
+                    const date = t.createdAt instanceof Date ? t.createdAt : new Date(t.createdAt as string);
+                    if (isValid(date)) {
+                        formattedDate = formatDate(date, 'dd/MM/yyyy HH:mm:ss');
+                    }
+                }
                 
                 return [
                     escapeCsvCell(t.id),
@@ -191,13 +195,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SettingsItem asChild>
+            <DropdownMenuTrigger className="w-full">
+              <SettingsItem>
                   <Download className="h-5 w-5 text-muted-foreground" />
                   <span>Xuất dữ liệu</span>
               </SettingsItem>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
               <DropdownMenuItem onClick={() => handleExport('json')}>
                 Xuất ra JSON
               </DropdownMenuItem>
