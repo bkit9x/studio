@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ const GoogleIcon = () => (
 
 
 export default function AuthPage() {
-  const { auth, isProcessingRedirect } = useFirebase();
+  const { auth, isLoading } = useFirebase();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,15 +101,24 @@ export default function AuthPage() {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
-        // We use signInWithRedirect, the result is handled in the AuthProvider
-        await signInWithRedirect(auth, provider);
+        const userCredential = await signInWithPopup(auth, provider);
+        const additionalInfo = getAdditionalUserInfo(userCredential);
+
+        if (additionalInfo?.isNewUser) {
+          await seedInitialDataForUser(userCredential.user.uid);
+          toast({ title: 'Chào mừng bạn!', description: 'Tài khoản của bạn đã được tạo.' });
+        } else {
+          toast({ title: 'Chào mừng trở lại!', description: 'Đã đăng nhập thành công.' });
+        }
+        router.push('/');
     } catch (error) {
         toast({ variant: 'destructive', title: 'Đăng nhập Google thất bại', description: (error as Error).message });
+    } finally {
         setIsSubmitting(false);
     }
   }
 
-  const isPageBusy = isSubmitting || isProcessingRedirect;
+  const isPageBusy = isSubmitting || isLoading;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted p-4">
