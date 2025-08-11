@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Download, Upload, Trash2 } from "lucide-react";
+import { ChevronRight, LogOut, Download, Upload, Trash2, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +22,12 @@ import { useFirebaseData } from "@/hooks/use-firebase-data";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { format as formatDate, isValid } from 'date-fns';
+import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 
 
-const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
+const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
     // Renders a div, but can be a button if an onClick handler is provided.
-    const Component = onClick ? 'button' : 'div';
+    const Component = asChild ? 'span' : (onClick ? 'button' : 'div');
     return (
     <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
@@ -47,9 +48,9 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
   const [importFileContent, setImportFileContent] = useState<{
-    wallets: Omit<Wallet, 'id'>[];
-    tags: Omit<Tag, 'id'>[];
-    transactions: Omit<Transaction, 'id'>[];
+    wallets: Omit<Wallet, 'id' | 'createdAt'>[];
+    tags: Omit<Tag, 'id' | 'createdAt'>[];
+    transactions: Omit<Transaction, 'id' | 'createdAt'>[];
   } | null>(null);
 
 
@@ -117,12 +118,9 @@ export default function SettingsPage() {
                     // Basic validation to ensure the file has the correct structure
                     if(Array.isArray(data.wallets) && Array.isArray(data.tags) && Array.isArray(data.transactions)) {
                         // Strip IDs from the imported data, as Firestore will generate new ones
-                        const walletsToImport = data.wallets.map(({ id, ...w }: Wallet) => w);
-                        const tagsToImport = data.tags.map(({ id, ...t }: Tag) => t);
-                        const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => ({
-                            ...tx,
-                            createdAt: tx.createdAt, // keep original date string
-                        }));
+                        const walletsToImport = data.wallets.map(({ id, createdAt, ...w }: Wallet) => w);
+                        const tagsToImport = data.tags.map(({ id, createdAt, ...t }: Tag) => t);
+                        const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => tx);
                         setImportFileContent({
                             wallets: walletsToImport,
                             tags: tagsToImport,
@@ -224,7 +222,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger asChild>
+             <DropdownMenuTrigger className="w-full">
                  <SettingsItem>
                     <Download className="h-5 w-5 text-muted-foreground" />
                     <span>Xuất dữ liệu</span>

@@ -119,9 +119,9 @@ export function useFirebaseData() {
   };
 
   const bulkInsert = async (
-    newWallets: Omit<Wallet, 'id'>[],
-    newTags: Omit<Tag, 'id'>[],
-    newTransactions: Omit<Transaction, 'id'>[]
+    newWallets: Omit<Wallet, 'id' | 'createdAt'>[],
+    newTags: Omit<Tag, 'id' | 'createdAt'>[],
+    newTransactions: Omit<Transaction, 'id' | 'createdAt'>[]
   ) => {
     if (!user) throw new Error("User not authenticated");
 
@@ -129,21 +129,38 @@ export function useFirebaseData() {
 
     const batch = writeBatch(db);
 
-    newWallets.forEach(wallet => {
+    const walletsToImport = newWallets.map(w => ({ ...w, createdAt: serverTimestamp() }));
+    walletsToImport.forEach(wallet => {
         const walletRef = doc(collection(db, `users/${user.uid}/wallets`));
-        batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
+        batch.set(walletRef, wallet);
     });
 
-    newTags.forEach(tag => {
+    const tagsToImport = newTags.map(t => ({ ...t, createdAt: serverTimestamp() }));
+    tagsToImport.forEach(tag => {
         const tagRef = doc(collection(db, `users/${user.uid}/tags`));
-        batch.set(tagRef, { ...tag, createdAt: serverTimestamp() });
+        batch.set(tagRef, tag);
     });
     
     newTransactions.forEach(transaction => {
         const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
+        
+        let createdAtDate: Date;
+        const rawDate = transaction.createdAt;
+
+        if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
+            // It's a Firestore Timestamp-like object from JSON
+            createdAtDate = new Timestamp(rawDate.seconds, rawDate.nanoseconds).toDate();
+        } else if (typeof rawDate === 'string') {
+            // It's an ISO string
+            createdAtDate = new Date(rawDate);
+        } else {
+            // Fallback to now if data is missing or invalid
+            createdAtDate = new Date();
+        }
+        
         const transactionData = {
             ...transaction,
-            createdAt: new Date(transaction.createdAt as string), // Ensure it's a Date object for Firestore
+            createdAt: createdAtDate,
         };
         batch.set(transactionRef, transactionData);
     });
