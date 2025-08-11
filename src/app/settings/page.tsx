@@ -125,6 +125,7 @@ export default function SettingsPage() {
                         // Strip only IDs from the imported data, keep other fields like createdAt
                         const walletsToImport = data.wallets.map(({ id, ...w }: Wallet) => w);
                         const tagsToImport = data.tags.map(({ id, ...t }: Tag) => t);
+                        // IMPORTANT: Keep createdAt field for transactions for later processing
                         const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => tx);
                         
                         setImportFileContent({
@@ -303,4 +304,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
