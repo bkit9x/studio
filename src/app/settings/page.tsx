@@ -25,6 +25,7 @@ import { format as formatDate, isValid } from 'date-fns';
 
 
 const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
+    // Renders a div, but can be a button if an onClick handler is provided.
     const Component = onClick ? 'button' : 'div';
     return (
     <Component
@@ -45,7 +46,11 @@ export default function SettingsPage() {
   const { wallets, tags, transactions, bulkInsert, clearAllData } = useFirebaseData();
   const { toast } = useToast();
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
-  const [importFileContent, setImportFileContent] = useState<any>(null);
+  const [importFileContent, setImportFileContent] = useState<{
+    wallets: Omit<Wallet, 'id'>[];
+    tags: Omit<Tag, 'id'>[];
+    transactions: Omit<Transaction, 'id'>[];
+  } | null>(null);
 
 
   const handleSignOut = async () => {
@@ -109,11 +114,22 @@ export default function SettingsPage() {
                 const content = e.target?.result;
                 if(typeof content === 'string') {
                     const data = JSON.parse(content);
-                    // Basic validation
-                    if(data.wallets && data.tags && data.transactions) {
-                        setImportFileContent(data);
+                    // Basic validation to ensure the file has the correct structure
+                    if(Array.isArray(data.wallets) && Array.isArray(data.tags) && Array.isArray(data.transactions)) {
+                        // Strip IDs from the imported data, as Firestore will generate new ones
+                        const walletsToImport = data.wallets.map(({ id, ...w }: Wallet) => w);
+                        const tagsToImport = data.tags.map(({ id, ...t }: Tag) => t);
+                        const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => ({
+                            ...tx,
+                            createdAt: tx.createdAt, // keep original date string
+                        }));
+                        setImportFileContent({
+                            wallets: walletsToImport,
+                            tags: tagsToImport,
+                            transactions: transactionsToImport
+                        });
                     } else {
-                        toast({ variant: "destructive", title: "Lỗi", description: "Tệp JSON không hợp lệ." });
+                        toast({ variant: "destructive", title: "Lỗi", description: "Tệp JSON không hợp lệ hoặc sai cấu trúc." });
                     }
                 }
             } catch (error) {
@@ -149,6 +165,8 @@ export default function SettingsPage() {
   const handleResetConfirm = async () => {
     try {
         await clearAllData();
+        // After clearing, re-seed the initial mock data
+        await seedInitialDataForUser(user!.uid);
         toast({ title: "Thành công", description: "Đã reset toàn bộ dữ liệu."});
     } catch (error) {
          const err = error as Error;
@@ -157,6 +175,16 @@ export default function SettingsPage() {
         setIsResetAlertOpen(false);
     }
   }
+
+  // Define a function that imports initial data
+  // This is wrapped in a try-catch to handle potential errors
+  const seedInitialData = async (uid: string) => {
+    try {
+      await seedInitialDataForUser(uid);
+    } catch (error) {
+      console.error("Failed to seed initial data:", error);
+    }
+  };
 
 
   return (
@@ -196,13 +224,11 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <div className="w-full">
-                    <SettingsItem>
-                        <Download className="h-5 w-5 text-muted-foreground" />
-                        <span>Xuất dữ liệu</span>
-                    </SettingsItem>
-                </div>
+             <DropdownMenuTrigger asChild>
+                 <SettingsItem>
+                    <Download className="h-5 w-5 text-muted-foreground" />
+                    <span>Xuất dữ liệu</span>
+                </SettingsItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
               <DropdownMenuItem onClick={() => handleExport('json')}>

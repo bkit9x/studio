@@ -119,14 +119,36 @@ export function useFirebaseData() {
   };
 
   const bulkInsert = async (
-    newWallets: Wallet[],
-    newTags: Tag[],
-    newTransactions: Transaction[]
+    newWallets: Omit<Wallet, 'id'>[],
+    newTags: Omit<Tag, 'id'>[],
+    newTransactions: Omit<Transaction, 'id'>[]
   ) => {
     if (!user) throw new Error("User not authenticated");
 
     await clearAllData();
-    await seedInitialDataForUser(user.uid);
+
+    const batch = writeBatch(db);
+
+    newWallets.forEach(wallet => {
+        const walletRef = doc(collection(db, `users/${user.uid}/wallets`));
+        batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
+    });
+
+    newTags.forEach(tag => {
+        const tagRef = doc(collection(db, `users/${user.uid}/tags`));
+        batch.set(tagRef, { ...tag, createdAt: serverTimestamp() });
+    });
+    
+    newTransactions.forEach(transaction => {
+        const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
+        const transactionData = {
+            ...transaction,
+            createdAt: new Date(transaction.createdAt as string), // Ensure it's a Date object for Firestore
+        };
+        batch.set(transactionRef, transactionData);
+    });
+    
+    await batch.commit();
   };
 
   return { wallets, tags, transactions, isLoading, clearAllData, bulkInsert };
