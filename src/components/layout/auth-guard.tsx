@@ -7,6 +7,7 @@ import { useFirebase } from '@/contexts/auth-provider';
 import { Skeleton } from '../ui/skeleton';
 
 const AUTH_ROUTES = ['/auth'];
+const PUBLIC_ROUTES = ['/auth']; // Extend this if there are other public pages
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useFirebase();
@@ -17,8 +18,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const isAuthRoute = AUTH_ROUTES.includes(pathname);
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
-    if (!user && !isAuthRoute) {
+    if (!user && !isPublicRoute) {
       router.push('/auth');
     }
 
@@ -39,14 +41,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+  
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
-  // If on an auth route, don't show the main layout, just the auth page children
-  if (AUTH_ROUTES.includes(pathname)) {
-    return <>{children}</>;
-  }
-
-  // If there's no user, children will be null to prevent flashing the main layout
-  if (!user) {
+  // If the user is not logged in and it's not a public route, don't render children
+  if (!user && !isPublicRoute) {
     return null;
   }
 

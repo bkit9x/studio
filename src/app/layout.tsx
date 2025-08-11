@@ -35,8 +35,8 @@ export default function RootLayout({
             <AuthGuard>
                 <div className="relative flex min-h-screen flex-col">
                   <main className="flex-1 pb-24">{children}</main>
+                  <BottomNav />
                 </div>
-                <BottomNav />
                 <Toaster />
             </AuthGuard>
         </FirebaseProvider>
