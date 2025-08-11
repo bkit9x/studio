@@ -119,8 +119,8 @@ export function useFirebaseData() {
   };
 
   const bulkInsert = async (
-    newWallets: Omit<Wallet, 'id' | 'createdAt'>[],
-    newTags: Omit<Tag, 'id' | 'createdAt'>[],
+    newWallets: Omit<Wallet, 'id'>[],
+    newTags: Omit<Tag, 'id'>[],
     newTransactions: Omit<Transaction, 'id'>[]
   ) => {
     if (!user) throw new Error("User not authenticated");
@@ -147,16 +147,15 @@ export function useFirebaseData() {
         const rawDate = transaction.createdAt;
         let createdAtDate: Date;
 
-        if (typeof rawDate === 'string') {
-            createdAtDate = new Date(rawDate);
-        } else if (rawDate instanceof Timestamp) {
-            createdAtDate = rawDate.toDate();
-        } else if (rawDate instanceof Date) {
+        if (rawDate instanceof Date) {
             createdAtDate = rawDate;
+        } else if (typeof rawDate === 'string') {
+            createdAtDate = new Date(rawDate);
         } else if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
+            // Handle Firestore Timestamp-like objects from JSON
             createdAtDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds).toDate();
         } else {
-            createdAtDate = new Date(); // Fallback
+            createdAtDate = new Date(); // Fallback, should not happen with valid data
         }
         
         const transactionDataWithDate = {

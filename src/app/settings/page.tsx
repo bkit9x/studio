@@ -23,11 +23,12 @@ import { useToast } from "@/hooks/use-toast";
 import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { format as formatDate, isValid } from 'date-fns';
 import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
+import { Timestamp } from "firebase/firestore";
 
 
 const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
     // Renders a div, but can be a button if an onClick handler is provided.
-    const Component = asChild ? 'span' : 'div';
+    const Component = onClick && !asChild ? 'button' : 'div';
     return (
     <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
@@ -77,7 +78,11 @@ export default function SettingsPage() {
             ...transactions.map(t => {
                 let formattedDate = '';
                 if (t.createdAt) {
-                    const date = t.createdAt instanceof Date ? t.createdAt : new Date(t.createdAt as string);
+                    // Handle both Date and Firestore Timestamp objects
+                    const date = t.createdAt instanceof Timestamp 
+                        ? t.createdAt.toDate() 
+                        : new Date(t.createdAt as string | Date);
+
                     if (isValid(date)) {
                         formattedDate = formatDate(date, 'dd/MM/yyyy HH:mm:ss');
                     }
@@ -117,10 +122,11 @@ export default function SettingsPage() {
                     const data = JSON.parse(content);
                     // Basic validation to ensure the file has the correct structure
                     if(Array.isArray(data.wallets) && Array.isArray(data.tags) && Array.isArray(data.transactions)) {
-                        // Strip IDs from the imported data, as Firestore will generate new ones
-                        const walletsToImport = data.wallets.map(({ id, createdAt, ...w }: Wallet) => w);
-                        const tagsToImport = data.tags.map(({ id, createdAt, ...t }: Tag) => t);
+                        // Strip only IDs from the imported data, keep other fields like createdAt
+                        const walletsToImport = data.wallets.map(({ id, ...w }: Wallet) => w);
+                        const tagsToImport = data.tags.map(({ id, ...t }: Tag) => t);
                         const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => tx);
+                        
                         setImportFileContent({
                             wallets: walletsToImport,
                             tags: tagsToImport,
@@ -222,14 +228,11 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger asChild>
-                <div className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left">
-                    <div className="flex items-center gap-3">
-                        <Download className="h-5 w-5 text-muted-foreground" />
-                        <span>Xuất dữ liệu</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
+             <DropdownMenuTrigger className="w-full">
+                <SettingsItem>
+                    <Download className="h-5 w-5 text-muted-foreground" />
+                    <span>Xuất dữ liệu</span>
+                </SettingsItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
               <DropdownMenuItem onClick={() => handleExport('json')}>
