@@ -25,8 +25,9 @@ import { format as formatDate, isValid } from 'date-fns';
 
 
 const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
+    const Component = onClick ? 'button' : 'div';
     return (
-    <button
+    <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
@@ -34,7 +35,7 @@ const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClic
          {children}
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </button>
+    </Component>
     )
 }
 
@@ -88,7 +89,7 @@ export default function SettingsPage() {
             })
         ];
         const csvContent = rows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([new TextEncoder().encode(csvContent)], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -195,11 +196,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full">
-              <SettingsItem>
-                  <Download className="h-5 w-5 text-muted-foreground" />
-                  <span>Xuất dữ liệu</span>
-              </SettingsItem>
+            <DropdownMenuTrigger asChild>
+                <div className="w-full">
+                    <SettingsItem>
+                        <Download className="h-5 w-5 text-muted-foreground" />
+                        <span>Xuất dữ liệu</span>
+                    </SettingsItem>
+                </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
               <DropdownMenuItem onClick={() => handleExport('json')}>
