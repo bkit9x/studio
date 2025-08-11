@@ -2,10 +2,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { BarChart2 } from "lucide-react";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { useFirebaseData } from "@/hooks/use-firebase-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const { wallets, transactions, isLoading } = useFirebaseData();
@@ -50,9 +53,17 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-primary">FinTrack</h1>
-        <p className="text-muted-foreground">Chào mừng trở lại!</p>
+      <header className="flex items-center justify-between">
+        <div>
+            <h1 className="text-2xl font-bold tracking-tight text-primary">FinTrack</h1>
+            <p className="text-muted-foreground">Chào mừng trở lại!</p>
+        </div>
+         <Button asChild variant="outline" size="sm">
+            <Link href="/reports">
+                <BarChart2 className="mr-2 h-4 w-4" />
+                Báo cáo
+            </Link>
+        </Button>
       </header>
       
       {isLoading ? (

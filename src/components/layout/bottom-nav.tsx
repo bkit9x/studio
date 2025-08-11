@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, Tags, Wallet, Settings, Plus, BarChart2 } from 'lucide-react';
+import { LayoutGrid, Tags, Wallet, Settings, Plus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -66,7 +66,7 @@ export function BottomNav() {
           </div>
 
           <NavItem href="/wallets" icon={Wallet} label="Ví" />
-          <NavItem href="/reports" icon={BarChart2} label="Báo cáo" />
+          <NavItem href="/settings" icon={Settings} label="Cài đặt" />
         </nav>
       </div>
       <AddTransactionSheet
