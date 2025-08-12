@@ -147,22 +147,24 @@ export function useFirebaseData() {
         const rawDate = transaction.createdAt;
         let finalDate: Timestamp;
 
+        // Check if rawDate is a Firestore Timestamp-like object from JSON
         if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
-            // Handle Firestore Timestamp-like objects from JSON
             finalDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds);
         } else if (rawDate instanceof Date) {
             finalDate = Timestamp.fromDate(rawDate);
         } else if (typeof rawDate === 'string') {
             finalDate = Timestamp.fromDate(new Date(rawDate));
         } else {
-            finalDate = Timestamp.now(); // Fallback, should not happen with valid data
+            finalDate = Timestamp.now(); // Fallback for safety
         }
         
+        // **FIX:** Create the final transaction object with the converted date
         const transactionDataWithDate = {
             ...transaction,
-            createdAt: finalDate, // Use the converted Timestamp object
+            createdAt: finalDate, // Use the correctly formatted Timestamp object
         };
 
+        // **FIX:** Use the corrected object to set the data in the batch
         batch.set(transactionRef, transactionDataWithDate);
     });
     
