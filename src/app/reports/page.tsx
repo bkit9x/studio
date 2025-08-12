@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
 import { useFirebaseData } from '@/hooks/use-firebase-data';
 import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,17 +79,13 @@ export default function ReportsPage() {
 
     const filteredTransactions = transactions.filter(t => {
         if (t.type !== 'expense') return false;
+        
         const txDate = new Date(t.createdAt as string);
-        const from = dateRange?.from;
-        const to = dateRange?.to;
+        const from = dateRange?.from ? startOfDay(dateRange.from) : undefined;
+        const to = dateRange?.to ? endOfDay(dateRange.to) : undefined;
 
         if (from && txDate < from) return false;
-        // Set 'to' to the end of the day for inclusive filtering
-        if (to) {
-            const toEndOfDay = new Date(to);
-            toEndOfDay.setHours(23, 59, 59, 999);
-            if (txDate > toEndOfDay) return false;
-        }
+        if (to && txDate > to) return false;
         
         return true;
     });
@@ -200,4 +196,3 @@ export default function ReportsPage() {
         </div>
     );
 }
-
