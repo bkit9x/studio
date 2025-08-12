@@ -6,6 +6,7 @@ import { format } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,7 @@ interface DateRangePickerProps {
 }
 
 export function DateRangePicker({ className, date, onDateChange }: DateRangePickerProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)")
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -58,7 +60,7 @@ export function DateRangePicker({ className, date, onDateChange }: DateRangePick
             defaultMonth={date?.from}
             selected={date}
             onSelect={onDateChange}
-            numberOfMonths={2}
+            numberOfMonths={isDesktop ? 2 : 1}
             locale={vi}
           />
         </PopoverContent>

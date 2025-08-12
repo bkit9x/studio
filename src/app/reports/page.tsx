@@ -104,13 +104,15 @@ export default function ReportsPage() {
     
     const totalSpent = Object.values(spendingByCategory).reduce((sum, amount) => sum + amount, 0);
 
+    const chartColors = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5'];
+
     const chartData = Object.entries(spendingByCategory)
-        .map(([tagId, amount]) => {
+        .map(([tagId, amount], index) => {
             const tag = tags.find(t => t.id === tagId);
             return {
                 name: tag?.name ?? 'Không rõ',
                 value: amount,
-                fill: `hsl(var(--${tag?.name === 'Mua sắm' ? 'chart-1' : tag?.name === 'Ăn uống' ? 'chart-2' : 'primary'}))`,
+                fill: `hsl(var(--${chartColors[index % chartColors.length]}))`,
             };
         })
         .sort((a,b) => b.value - a.value); // Sort for better visualization
@@ -130,7 +132,7 @@ export default function ReportsPage() {
                 <p className="text-muted-foreground">Phân tích chi tiêu của bạn.</p>
             </header>
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                  <Select value={preset} onValueChange={handlePresetChange}>
                     <SelectTrigger>
                         <SelectValue placeholder="Chọn khoảng thời gian" />
