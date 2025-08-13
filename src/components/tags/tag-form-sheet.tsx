@@ -33,7 +33,14 @@ const spendingIcons = [
   'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
 ] as const;
 
-const incomeIcons = ['Briefcase', 'Gift', 'Plus', 'Landmark'] as const;
+const incomeIcons = [
+  'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
+  'Plane', 'House', 'PiggyBank', 'ArrowRightLeft', 'BanknoteArrowUp', 'BanknoteArrowDown', 'Coffee', 'Pizza',
+  'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
+  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake',
+  'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer',
+  'Plus'
+] as const;
 
 const iconNames = [...new Set([...spendingIcons, ...incomeIcons])];
 
