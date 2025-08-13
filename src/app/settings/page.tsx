@@ -24,11 +24,13 @@ import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { format as formatDate, isValid } from 'date-fns';
 import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 import { Timestamp } from "firebase/firestore";
+import { Slot } from "@radix-ui/react-slot"
 
 
-const SettingsItem = ({ children, onClick, isTrigger = false }: { children: React.ReactNode, onClick?: () => void, isTrigger?: boolean }) => {
+const SettingsItem = ({ children, onClick, isTrigger = false, asChild = false }: { children: React.ReactNode, onClick?: () => void, isTrigger?: boolean, asChild?: boolean }) => {
+    const Component = asChild ? Slot : 'button';
     return (
-    <button
+    <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
@@ -36,7 +38,7 @@ const SettingsItem = ({ children, onClick, isTrigger = false }: { children: Reac
          {children}
         </div>
         {isTrigger ? <ChevronRight className="h-5 w-5 text-muted-foreground" /> : null}
-    </button>
+    </Component>
     )
 }
 
@@ -219,7 +221,7 @@ export default function SettingsPage() {
         <CardContent className="divide-y p-0">
           <DropdownMenu>
              <DropdownMenuTrigger asChild>
-                <SettingsItem isTrigger>
+                <SettingsItem asChild isTrigger>
                   <Download className="h-5 w-5 text-muted-foreground" />
                   <span>Xuất dữ liệu</span>
                 </SettingsItem>
