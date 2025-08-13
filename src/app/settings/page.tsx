@@ -24,19 +24,18 @@ import type { Wallet, Tag, Transaction } from "@/lib/types";
 import { format as formatDate, isValid } from 'date-fns';
 import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 import { Timestamp } from "firebase/firestore";
-import { Slot } from "@radix-ui/react-slot";
 
 
-const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
-    const Component = asChild ? Slot : 'button';
+const SettingsItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => {
     return (
-    <Component
-      type={asChild ? undefined : 'button'}
-      className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
-      onClick={onClick}
-    >
-      {children}
-    </Component>
+        <button
+          type='button'
+          className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
+          onClick={onClick}
+        >
+          <div className="flex items-center gap-3">{children}</div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </button>
     )
 }
 
@@ -207,16 +206,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
             <SettingsItem>
-                <div className="flex items-center gap-3"><span>Ngôn ngữ</span></div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <span>Ngôn ngữ</span>
             </SettingsItem>
              <SettingsItem>
-                <div className="flex items-center gap-3"><span>Đơn vị tiền tệ</span></div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <span>Đơn vị tiền tệ</span>
             </SettingsItem>
              <SettingsItem>
-                <div className="flex items-center gap-3"><span>Giao diện</span></div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <span>Giao diện</span>
             </SettingsItem>
         </CardContent>
       </Card>
@@ -227,16 +223,14 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger asChild>
-                <SettingsItem asChild>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <Download className="h-5 w-5 text-muted-foreground" />
-                      <span>Xuất dữ liệu</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            <DropdownMenuTrigger asChild>
+                <button className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left">
+                  <div className="flex items-center gap-3">
+                    <Download className="h-5 w-5 text-muted-foreground" />
+                    <span>Xuất dữ liệu</span>
                   </div>
-                </SettingsItem>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-[calc(var(--radix-dropdown-menu-trigger-width)-1.6rem)]">
               <DropdownMenuItem onClick={() => handleExport('json')}>
@@ -249,23 +243,17 @@ export default function SettingsPage() {
           </DropdownMenu>
 
           <SettingsItem onClick={() => document.getElementById('import-input')?.click()}>
-            <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                    <span>Nhập dữ liệu</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center gap-3">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                <span>Nhập dữ liệu</span>
             </div>
             <input type="file" id="import-input" accept=".json" className="hidden" onChange={handleImportRequest} />
           </SettingsItem>
           
           <SettingsItem onClick={() => setIsResetAlertOpen(true)}>
-             <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
-                    <Trash2 className="h-5 w-5 text-destructive" />
-                    <span className="text-destructive">Reset dữ liệu</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+             <div className="flex items-center gap-3">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                <span className="text-destructive">Reset dữ liệu</span>
              </div>
           </SettingsItem>
         </CardContent>
@@ -315,4 +303,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
