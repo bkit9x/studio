@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   collection,
   query,
@@ -15,7 +15,6 @@ import {
   orderBy,
   Timestamp,
   getDocs,
-  runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useFirebase } from '@/contexts/auth-provider';
@@ -161,12 +160,10 @@ export function useFirebaseData() {
             oldToNewTagIdMap.set(oldId, newTagRef.id);
         }
         
-        await batch.commit(); // Commit wallets and tags first to get their refs
+        await batch.commit(); 
         
-        // Start a new batch for transactions and wallet updates
         const transactionBatch = writeBatch(db);
 
-        // A map to store pending wallet updates
         const walletUpdates = new Map<string, { totalIncome: number, totalExpense: number, balance: number }>();
 
         for (const transaction of newTransactions) {
@@ -204,7 +201,6 @@ export function useFirebaseData() {
             const newTransactionRef = doc(collection(db, `users/${user.uid}/transactions`));
             transactionBatch.set(newTransactionRef, finalTransaction);
 
-            // Aggregate wallet updates
             const wallet = newWallets.find(w => w.id === transaction.walletId);
             if (wallet) {
                 const updates = walletUpdates.get(newWalletId) || { totalIncome: 0, totalExpense: 0, balance: wallet.initialBalance };
@@ -219,7 +215,6 @@ export function useFirebaseData() {
             }
         }
         
-        // Apply wallet updates to the batch
         for (const [walletId, updates] of walletUpdates.entries()) {
             const walletRef = doc(db, `users/${user.uid}/wallets`, walletId);
             transactionBatch.update(walletRef, updates);
@@ -296,66 +291,4 @@ export function useFirestoreTable<T extends { id: string, [key: string]: any }>(
     }
 
     return { addItem, updateItem, deleteItem, bulkDelete };
-}
-
-export function useFirestoreWallets() {
-    const { user } = useFirebase();
-    const { toast } = useToast();
-
-    const updateWalletBalance = useCallback(async (
-        walletId: string, 
-        amount: number, // The amount of the current transaction
-        type: 'add' | 'update',
-        oldTransaction?: Transaction // The old transaction data for updates
-    ) => {
-        if (!user) throw new Error("User not authenticated");
-        
-        const walletRef = doc(db, `users/${user.uid}/wallets`, walletId);
-        
-        try {
-            await runTransaction(db, async (t) => {
-                const walletDoc = await t.get(walletRef);
-                if (!walletDoc.exists()) {
-                    throw new Error("Không tìm thấy ví!");
-                }
-                const walletData = walletDoc.data() as Wallet;
-
-                // Initialize fields to 0 if they are undefined
-                let newBalance = walletData.balance ?? 0;
-                let newTotalIncome = walletData.totalIncome ?? 0;
-                let newTotalExpense = walletData.totalExpense ?? 0;
-                
-                if (type === 'update' && oldTransaction) {
-                    // Revert old transaction amount first
-                    if (oldTransaction.type === 'income') {
-                        newBalance -= oldTransaction.amount;
-                        newTotalIncome -= oldTransaction.amount;
-                    } else { // expense
-                        newBalance += oldTransaction.amount;
-                        newTotalExpense -= oldTransaction.amount;
-                    }
-                }
-
-                // Apply the new transaction amount (for both 'add' and 'update')
-                // For 'add' type with deletion (negative amount), it works as subtraction
-                newBalance += amount;
-                if (amount > 0) { // Income or expense reversal
-                    newTotalIncome += amount;
-                } else { // Expense or income reversal
-                    newTotalExpense -= amount; // amount is negative, so this adds to expense
-                }
-                
-                t.update(walletRef, { 
-                    balance: newBalance,
-                    totalIncome: newTotalIncome,
-                    totalExpense: newTotalExpense
-                });
-            });
-        } catch (error) {
-            console.error("Error updating wallet balance:", error);
-            toast({ variant: 'destructive', title: "Lỗi cập nhật số dư", description: (error as Error).message });
-        }
-    }, [user, toast]);
-
-    return { updateWalletBalance };
 }

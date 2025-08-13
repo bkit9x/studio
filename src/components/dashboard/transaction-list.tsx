@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirebaseData, useFirestoreTable, useFirestoreWallets } from '@/hooks/use-firebase-data';
+import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
 import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
@@ -88,7 +88,6 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
     const { tags } = useFirebaseData();
     const { deleteItem: deleteTransaction } = useFirestoreTable<Transaction>('transactions');
-    const { updateWalletBalance } = useFirestoreWallets();
     
     const [visibleTransactions, setVisibleTransactions] = useState<Transaction[]>([]);
     const [page, setPage] = useState(1);
@@ -127,12 +126,6 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         if (!transactionToDelete) return;
         
         await deleteTransaction(transactionToDelete.id);
-
-        const amountToRevert = transactionToDelete.type === 'income' 
-            ? -transactionToDelete.amount 
-            : transactionToDelete.amount;
-
-        await updateWalletBalance(transactionToDelete.walletId, amountToRevert, 'add');
 
         toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
 

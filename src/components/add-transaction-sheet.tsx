@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
 import type { Transaction, TransactionType, Wallet as WalletType, Tag } from '@/lib/types';
-import { useFirebaseData, useFirestoreTable, useFirestoreWallets } from '@/hooks/use-firebase-data';
+import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -32,7 +32,6 @@ const transactionSchema = z.object({
   createdAt: z.date(),
   peerWalletId: z.string().optional(), // The other wallet in a transfer
 }).refine(data => {
-    // If peerWalletId is set, it must not be the same as walletId
     if (data.peerWalletId) {
         return data.peerWalletId !== data.walletId;
     }
@@ -76,7 +75,6 @@ interface AddTransactionSheetProps {
 export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selectedWalletId }: AddTransactionSheetProps) {
   const { wallets, tags } = useFirebaseData();
   const { addItem: addTransaction, updateItem: updateTransaction } = useFirestoreTable<Transaction>('transactions');
-  const { updateWalletBalance } = useFirestoreWallets();
   const { toast } = useToast();
 
   const isEditMode = !!transaction;
@@ -130,12 +128,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
      }
 
      if (isEditMode && transaction) {
-        const { type, peerWalletId, ...updates } = data; // Type cannot be changed in edit mode
-        
-        // This is the important part: we need to pass the old transaction to updateWalletBalance
-        await updateWalletBalance(transaction.walletId, updates.amount, 'update', transaction);
+        const { type, peerWalletId, ...updates } = data;
         await updateTransaction(transaction.id, { ...updates });
-        
         toast({ title: "Thành công!", description: "Đã cập nhật giao dịch." });
 
     } else if (isTransfer && data.peerWalletId) {
@@ -152,23 +146,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
         
         if (!transferExpenseTag || !transferIncomeTag) return false;
 
-        // Create expense from source wallet
         await addTransaction({ type: 'expense', amount: data.amount, description: data.description || `Chuyển đến ${destinationWallet.name}`, tagId: transferExpenseTag.id, walletId: sourceWallet.id, createdAt: data.createdAt });
-        await updateWalletBalance(sourceWallet.id, -data.amount, 'add');
-
-        // Create income to destination wallet
-         await addTransaction({ type: 'income', amount: data.amount, description: data.description || `Nhận từ ${sourceWallet.name}`, tagId: transferIncomeTag.id, walletId: destinationWallet.id, createdAt: data.createdAt });
-         await updateWalletBalance(destinationWallet.id, data.amount, 'add');
-
+        await addTransaction({ type: 'income', amount: data.amount, description: data.description || `Nhận từ ${sourceWallet.name}`, tagId: transferIncomeTag.id, walletId: destinationWallet.id, createdAt: data.createdAt });
         toast({ title: "Thành công!", description: "Đã tạo giao dịch chuyển tiền." });
 
     } else {
-        // Regular income/expense
         const { peerWalletId, ...transactionData } = data;
         await addTransaction({...transactionData});
-        const amount = transactionData.type === 'income' ? transactionData.amount : -transactionData.amount;
-        await updateWalletBalance(transactionData.walletId, amount, 'add');
-        
         toast({ title: "Thành công!", description: "Đã thêm giao dịch mới." });
     }
     return true;
@@ -403,5 +387,3 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
     </Sheet>
   );
 }
-
-    
