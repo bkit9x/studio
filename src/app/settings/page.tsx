@@ -26,10 +26,9 @@ import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 import { Timestamp } from "firebase/firestore";
 
 
-const SettingsItem = ({ children, onClick, asChild = false, isTrigger = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean, isTrigger?: boolean }) => {
-    const Component = asChild ? 'div' : 'button';
+const SettingsItem = ({ children, onClick, isTrigger = false }: { children: React.ReactNode, onClick?: () => void, isTrigger?: boolean }) => {
     return (
-    <Component
+    <button
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
@@ -37,7 +36,7 @@ const SettingsItem = ({ children, onClick, asChild = false, isTrigger = false }:
          {children}
         </div>
         {isTrigger ? <ChevronRight className="h-5 w-5 text-muted-foreground" /> : null}
-    </Component>
+    </button>
     )
 }
 
@@ -219,7 +218,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger className="w-full">
+             <DropdownMenuTrigger asChild>
                 <SettingsItem isTrigger>
                   <Download className="h-5 w-5 text-muted-foreground" />
                   <span>Xuất dữ liệu</span>
