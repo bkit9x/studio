@@ -130,20 +130,11 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
      }
 
      if (isEditMode && transaction) {
-        const { type, peerWalletId, ...updates } = data;
-        await updateTransaction(transaction.id, { ...updates });
+        const { type, peerWalletId, ...updates } = data; // Type cannot be changed in edit mode
         
-        const amountDifference = (updates.type === 'income' ? updates.amount : -updates.amount) - (transaction.type === 'income' ? transaction.amount : -transaction.amount);
-
-        // Update original wallet if it changed
-        if(transaction.walletId !== updates.walletId) {
-            const oldAmount = transaction.type === 'income' ? -transaction.amount : transaction.amount;
-            await updateWalletBalance(transaction.walletId, oldAmount, 'add');
-            const newAmount = updates.type === 'income' ? updates.amount : -updates.amount;
-            await updateWalletBalance(updates.walletId, newAmount, 'add');
-        } else {
-            await updateWalletBalance(updates.walletId, amountDifference, 'add');
-        }
+        // This is the important part: we need to pass the old transaction to updateWalletBalance
+        await updateWalletBalance(transaction.walletId, updates.amount, 'update', transaction);
+        await updateTransaction(transaction.id, { ...updates });
         
         toast({ title: "Thành công!", description: "Đã cập nhật giao dịch." });
 
@@ -153,7 +144,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
         const sourceWallet = wallets.find(w => w.id === sourceWalletId);
         const destinationWallet = wallets.find(w => w.id === destinationWalletId);
-
+        
         if (!sourceWallet || !destinationWallet) return false;
 
         const transferExpenseTag = tags.find(t => t.name === 'Chuyển khoản' && t.type === 'expense');
@@ -283,7 +274,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{transactionType === 'income' ? 'Ví nhận' : 'Ví chi'}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
                       <FormControl>
                         <SelectTrigger>
                            <Wallet className="mr-2 h-4 w-4" />

@@ -304,9 +304,9 @@ export function useFirestoreWallets() {
 
     const updateWalletBalance = useCallback(async (
         walletId: string, 
-        amount: number, 
-        type: 'add' | 'subtract' | 'update',
-        oldTransaction?: Transaction
+        amount: number, // The amount of the current transaction
+        type: 'add' | 'update',
+        oldTransaction?: Transaction // The old transaction data for updates
     ) => {
         if (!user) throw new Error("User not authenticated");
         
@@ -320,33 +320,29 @@ export function useFirestoreWallets() {
                 }
                 const walletData = walletDoc.data() as Wallet;
 
-                let newBalance = walletData.balance;
-                let newTotalIncome = walletData.totalIncome;
-                let newTotalExpense = walletData.totalExpense;
+                // Initialize fields to 0 if they are undefined
+                let newBalance = walletData.balance ?? 0;
+                let newTotalIncome = walletData.totalIncome ?? 0;
+                let newTotalExpense = walletData.totalExpense ?? 0;
                 
                 if (type === 'update' && oldTransaction) {
-                    // Revert old transaction
+                    // Revert old transaction amount first
                     if (oldTransaction.type === 'income') {
                         newBalance -= oldTransaction.amount;
                         newTotalIncome -= oldTransaction.amount;
-                    } else {
+                    } else { // expense
                         newBalance += oldTransaction.amount;
                         newTotalExpense -= oldTransaction.amount;
                     }
                 }
 
-                if (type === 'subtract') {
-                    // This is for deletion
-                     newBalance -= amount;
-                     newTotalExpense += amount;
-                } else {
-                    // This is for addition or the new part of an update
-                    newBalance += amount;
-                    if (amount > 0) { // Income
-                        newTotalIncome += amount;
-                    } else { // Expense
-                        newTotalExpense -= amount; // amount is negative
-                    }
+                // Apply the new transaction amount (for both 'add' and 'update')
+                // For 'add' type with deletion (negative amount), it works as subtraction
+                newBalance += amount;
+                if (amount > 0) { // Income or expense reversal
+                    newTotalIncome += amount;
+                } else { // Expense or income reversal
+                    newTotalExpense -= amount; // amount is negative, so this adds to expense
                 }
                 
                 t.update(walletRef, { 
