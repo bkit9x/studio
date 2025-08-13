@@ -31,6 +31,7 @@ const SettingsItem = ({ children, onClick, asChild = false }: { children: React.
     const Component = asChild ? Slot : 'button';
     return (
     <Component
+      type={asChild ? undefined : 'button'}
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
       onClick={onClick}
     >
@@ -228,7 +229,7 @@ export default function SettingsPage() {
           <DropdownMenu>
              <DropdownMenuTrigger asChild>
                 <SettingsItem asChild>
-                  <div>
+                  <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                       <Download className="h-5 w-5 text-muted-foreground" />
                       <span>Xuất dữ liệu</span>
@@ -248,24 +249,24 @@ export default function SettingsPage() {
           </DropdownMenu>
 
           <SettingsItem onClick={() => document.getElementById('import-input')?.click()}>
-            <>
+            <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
                     <Upload className="h-5 w-5 text-muted-foreground" />
                     <span>Nhập dữ liệu</span>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </>
+            </div>
             <input type="file" id="import-input" accept=".json" className="hidden" onChange={handleImportRequest} />
           </SettingsItem>
           
           <SettingsItem onClick={() => setIsResetAlertOpen(true)}>
-             <>
+             <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
                     <Trash2 className="h-5 w-5 text-destructive" />
                     <span className="text-destructive">Reset dữ liệu</span>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
-             </>
+             </div>
           </SettingsItem>
         </CardContent>
       </Card>
@@ -314,3 +315,4 @@ export default function SettingsPage() {
     </>
   );
 }
+
