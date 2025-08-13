@@ -229,10 +229,12 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger className="w-full">
-                <SettingsItem>
+             <DropdownMenuTrigger asChild>
+                <SettingsItem asChild>
+                  <>
                     <Download className="h-5 w-5 text-muted-foreground" />
                     <span>Xuất dữ liệu</span>
+                  </>
                 </SettingsItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">

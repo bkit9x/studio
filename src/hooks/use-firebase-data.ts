@@ -124,51 +124,53 @@ export function useFirebaseData() {
     newTransactions: Omit<Transaction, 'id'>[]
   ) => {
     if (!user) throw new Error("User not authenticated");
-
-    await clearAllData();
-
-    const batch = writeBatch(db);
-
-    const walletsToImport = newWallets.map(w => ({ ...w, createdAt: serverTimestamp() }));
-    walletsToImport.forEach(wallet => {
-        const walletRef = doc(collection(db, `users/${user.uid}/wallets`));
-        batch.set(walletRef, wallet);
-    });
-
-    const tagsToImport = newTags.map(t => ({ ...t, createdAt: serverTimestamp() }));
-    tagsToImport.forEach(tag => {
-        const tagRef = doc(collection(db, `users/${user.uid}/tags`));
-        batch.set(tagRef, tag);
-    });
     
-    newTransactions.forEach(transaction => {
-        const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
-        
-        const rawDate = transaction.createdAt;
-        let finalDate: Timestamp;
+    try {
+        await clearAllData();
 
-        // Check if rawDate is a Firestore Timestamp-like object from JSON
-        if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
-            finalDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds);
-        } else if (rawDate instanceof Date) {
-            finalDate = Timestamp.fromDate(rawDate);
-        } else if (typeof rawDate === 'string') {
-            finalDate = Timestamp.fromDate(new Date(rawDate));
-        } else {
-            finalDate = Timestamp.now(); // Fallback for safety
-        }
-        
-        // **FIX:** Create the final transaction object with the converted date
-        const transactionDataWithDate = {
-            ...transaction,
-            createdAt: finalDate, // Use the correctly formatted Timestamp object
-        };
+        const batch = writeBatch(db);
 
-        // **FIX:** Use the corrected object to set the data in the batch
-        batch.set(transactionRef, transactionDataWithDate);
-    });
-    
-    await batch.commit();
+        // Process Wallets and Tags first to get their new IDs if needed
+        newWallets.forEach(wallet => {
+            const walletRef = doc(collection(db, `users/${user.uid}/wallets`));
+            batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
+        });
+
+        newTags.forEach(tag => {
+            const tagRef = doc(collection(db, `users/${user.uid}/tags`));
+            batch.set(tagRef, { ...tag, createdAt: serverTimestamp() });
+        });
+        
+        // Process Transactions
+        newTransactions.forEach(transaction => {
+            const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
+            
+            let finalDate: Timestamp;
+            const rawDate = transaction.createdAt;
+
+            if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
+                finalDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds);
+            } else if (typeof rawDate === 'string' && new Date(rawDate).toString() !== 'Invalid Date') {
+                finalDate = Timestamp.fromDate(new Date(rawDate));
+            } else if (rawDate instanceof Date) {
+                finalDate = Timestamp.fromDate(rawDate);
+            } else {
+                 throw new Error(`Định dạng ngày không hợp lệ cho giao dịch: ${transaction.description}`);
+            }
+            
+            const finalTransaction = {
+                ...transaction,
+                createdAt: finalDate,
+            };
+
+            batch.set(transactionRef, finalTransaction);
+        });
+        
+        await batch.commit();
+    } catch (error) {
+        console.error("Lỗi trong quá trình nhập dữ liệu:", error);
+        throw error; // Re-throw the error to be caught in the component
+    }
   };
 
   return { wallets, tags, transactions, isLoading, clearAllData, bulkInsert };
