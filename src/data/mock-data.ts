@@ -23,6 +23,6 @@ export const mockTags: Omit<Tag, 'id' | 'createdAt'>[] = [
 ];
 
 export const mockWallets: Omit<Wallet, 'id' | 'createdAt'>[] = [
-  { name: 'Ví chính', initialBalance: 5000000 },
-  { name: 'Tiết kiệm', initialBalance: 20000000 },
+  { name: 'Ví chính', initialBalance: 500 },
+  { name: 'Tiết kiệm', initialBalance: 2000 },
 ];
