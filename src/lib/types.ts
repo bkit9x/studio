@@ -7,6 +7,9 @@ export type Wallet = {
   id: string;
   name: string;
   initialBalance: number;
+  balance: number;
+  totalIncome: number;
+  totalExpense: number;
   createdAt: Timestamp | Date | string;
 };
 
@@ -33,5 +36,4 @@ export type Transaction = {
   amount: number;
   description: string;
   createdAt: Timestamp | Date | string; 
-  sourceWalletId?: string | null;
 };

@@ -15,6 +15,7 @@ import {
   orderBy,
   Timestamp,
   getDocs,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useFirebase } from '@/contexts/auth-provider';
@@ -34,7 +35,14 @@ export const seedInitialDataForUser = async (userId: string) => {
 
     mockWallets.forEach(wallet => {
         const walletRef = doc(collection(db, `users/${userId}/wallets`));
-        batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
+        const newWalletData = {
+          ...wallet,
+          balance: wallet.initialBalance,
+          totalIncome: 0,
+          totalExpense: 0,
+          createdAt: serverTimestamp()
+        };
+        batch.set(walletRef, newWalletData);
     });
 
     mockTags.forEach(tag => {
@@ -129,16 +137,22 @@ export function useFirebaseData() {
         const oldToNewWalletIdMap = new Map<string, string>();
         const oldToNewTagIdMap = new Map<string, string>();
 
-        // Wallets
         for (const wallet of newWallets) {
             const oldId = wallet.id;
             const { id, ...walletData } = wallet;
             const newWalletRef = doc(collection(db, `users/${user.uid}/wallets`));
-            batch.set(newWalletRef, { ...walletData, createdAt: serverTimestamp() });
+            
+            const newWalletData = {
+                ...walletData,
+                balance: wallet.initialBalance,
+                totalIncome: 0,
+                totalExpense: 0,
+                createdAt: serverTimestamp()
+            };
+            batch.set(newWalletRef, newWalletData);
             oldToNewWalletIdMap.set(oldId, newWalletRef.id);
         }
 
-        // Tags
         for (const tag of newTags) {
             const oldId = tag.id;
             const { id, ...tagData } = tag;
@@ -147,7 +161,14 @@ export function useFirebaseData() {
             oldToNewTagIdMap.set(oldId, newTagRef.id);
         }
         
-        // Transactions
+        await batch.commit(); // Commit wallets and tags first to get their refs
+        
+        // Start a new batch for transactions and wallet updates
+        const transactionBatch = writeBatch(db);
+
+        // A map to store pending wallet updates
+        const walletUpdates = new Map<string, { totalIncome: number, totalExpense: number, balance: number }>();
+
         for (const transaction of newTransactions) {
             const { id, ...transactionData } = transaction;
 
@@ -162,15 +183,15 @@ export function useFirebaseData() {
             let finalDate: Timestamp;
             const rawDate = transaction.createdAt;
 
-             if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate && !(rawDate instanceof Date)) {
+             if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && !Array.isArray(rawDate) && !(rawDate instanceof Date)) {
                 finalDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds);
             } else if (rawDate instanceof Date) {
                 finalDate = Timestamp.fromDate(rawDate);
             } else if (typeof rawDate === 'string' && new Date(rawDate).toString() !== 'Invalid Date') {
                 finalDate = Timestamp.fromDate(new Date(rawDate));
             } else {
-                 toast({ variant: 'destructive', title: `Lỗi định dạng ngày`, description: `Giao dịch "${transaction.description}" có định dạng ngày không hợp lệ.` });
-                 continue; // Skip this transaction
+                 console.error(`Invalid date format for transaction: ${transaction.description}`, rawDate);
+                 continue;
             }
             
             const finalTransaction = {
@@ -181,10 +202,30 @@ export function useFirebaseData() {
             };
 
             const newTransactionRef = doc(collection(db, `users/${user.uid}/transactions`));
-            batch.set(newTransactionRef, finalTransaction);
+            transactionBatch.set(newTransactionRef, finalTransaction);
+
+            // Aggregate wallet updates
+            const wallet = newWallets.find(w => w.id === transaction.walletId);
+            if (wallet) {
+                const updates = walletUpdates.get(newWalletId) || { totalIncome: 0, totalExpense: 0, balance: wallet.initialBalance };
+                if (finalTransaction.type === 'income') {
+                    updates.totalIncome += finalTransaction.amount;
+                    updates.balance += finalTransaction.amount;
+                } else {
+                    updates.totalExpense += finalTransaction.amount;
+                    updates.balance -= finalTransaction.amount;
+                }
+                walletUpdates.set(newWalletId, updates);
+            }
         }
         
-        await batch.commit();
+        // Apply wallet updates to the batch
+        for (const [walletId, updates] of walletUpdates.entries()) {
+            const walletRef = doc(db, `users/${user.uid}/wallets`, walletId);
+            transactionBatch.update(walletRef, updates);
+        }
+        
+        await transactionBatch.commit();
 
     } catch (error: any) {
         console.error("Lỗi trong quá trình nhập dữ liệu:", error);
@@ -208,10 +249,12 @@ export function useFirestoreTable<T extends { id: string, [key: string]: any }>(
 
     const addItem = async (item: Omit<T, 'id' | 'createdAt'>) => {
         try {
-            await addDoc(getCollectionRef(), { ...item, createdAt: serverTimestamp() });
+            const docRef = await addDoc(getCollectionRef(), { ...item, createdAt: serverTimestamp() });
+            return docRef.id;
         } catch (error) {
             console.error(`Error adding item to ${collectionName}:`, error);
             toast({ variant: 'destructive', title: `Lỗi thêm ${collectionName}`, description: (error as Error).message });
+            return null;
         }
     };
     
@@ -253,4 +296,70 @@ export function useFirestoreTable<T extends { id: string, [key: string]: any }>(
     }
 
     return { addItem, updateItem, deleteItem, bulkDelete };
+}
+
+export function useFirestoreWallets() {
+    const { user } = useFirebase();
+    const { toast } = useToast();
+
+    const updateWalletBalance = useCallback(async (
+        walletId: string, 
+        amount: number, 
+        type: 'add' | 'subtract' | 'update',
+        oldTransaction?: Transaction
+    ) => {
+        if (!user) throw new Error("User not authenticated");
+        
+        const walletRef = doc(db, `users/${user.uid}/wallets`, walletId);
+        
+        try {
+            await runTransaction(db, async (t) => {
+                const walletDoc = await t.get(walletRef);
+                if (!walletDoc.exists()) {
+                    throw new Error("Không tìm thấy ví!");
+                }
+                const walletData = walletDoc.data() as Wallet;
+
+                let newBalance = walletData.balance;
+                let newTotalIncome = walletData.totalIncome;
+                let newTotalExpense = walletData.totalExpense;
+                
+                if (type === 'update' && oldTransaction) {
+                    // Revert old transaction
+                    if (oldTransaction.type === 'income') {
+                        newBalance -= oldTransaction.amount;
+                        newTotalIncome -= oldTransaction.amount;
+                    } else {
+                        newBalance += oldTransaction.amount;
+                        newTotalExpense -= oldTransaction.amount;
+                    }
+                }
+
+                if (type === 'subtract') {
+                    // This is for deletion
+                     newBalance -= amount;
+                     newTotalExpense += amount;
+                } else {
+                    // This is for addition or the new part of an update
+                    newBalance += amount;
+                    if (amount > 0) { // Income
+                        newTotalIncome += amount;
+                    } else { // Expense
+                        newTotalExpense -= amount; // amount is negative
+                    }
+                }
+                
+                t.update(walletRef, { 
+                    balance: newBalance,
+                    totalIncome: newTotalIncome,
+                    totalExpense: newTotalExpense
+                });
+            });
+        } catch (error) {
+            console.error("Error updating wallet balance:", error);
+            toast({ variant: 'destructive', title: "Lỗi cập nhật số dư", description: (error as Error).message });
+        }
+    }, [user, toast]);
+
+    return { updateWalletBalance };
 }

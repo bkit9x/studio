@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
+import { useFirebaseData, useFirestoreTable, useFirestoreWallets } from '@/hooks/use-firebase-data';
 import type { Transaction, Tag } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
@@ -87,7 +87,8 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
     const { tags } = useFirebaseData();
-    const { deleteItem: deleteTransaction, bulkDelete: bulkDeleteTransactions } = useFirestoreTable<Transaction>('transactions');
+    const { deleteItem: deleteTransaction } = useFirestoreTable<Transaction>('transactions');
+    const { updateWalletBalance } = useFirestoreWallets();
     
     const [visibleTransactions, setVisibleTransactions] = useState<Transaction[]>([]);
     const [page, setPage] = useState(1);
@@ -125,23 +126,15 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
     const handleDeleteConfirm = async () => {
         if (!transactionToDelete) return;
         
-        // If it's a transfer, delete both linked transactions
-        if (transactionToDelete.sourceWalletId && transactionToDelete.sourceWalletId !== 'none') {
-            const linkedTransaction = transactions.find(t => 
-                t.sourceWalletId === transactionToDelete.sourceWalletId && 
-                t.id !== transactionToDelete.id &&
-                t.amount === transactionToDelete.amount
-            );
-            const idsToDelete = [transactionToDelete.id];
-            if(linkedTransaction) {
-                idsToDelete.push(linkedTransaction.id);
-            }
-            await bulkDeleteTransactions(idsToDelete);
-            toast({ title: "Thành công!", description: "Đã xóa giao dịch chuyển tiền." });
-        } else {
-             await deleteTransaction(transactionToDelete.id);
-             toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
-        }
+        await deleteTransaction(transactionToDelete.id);
+
+        const amountToRevert = transactionToDelete.type === 'income' 
+            ? -transactionToDelete.amount 
+            : transactionToDelete.amount;
+
+        await updateWalletBalance(transactionToDelete.walletId, amountToRevert, 'add');
+
+        toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
 
         setIsAlertOpen(false);
         setTransactionToDelete(null);

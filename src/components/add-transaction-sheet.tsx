@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import { cn } from '@/lib/utils';
 import type { Transaction, TransactionType, Wallet as WalletType, Tag } from '@/lib/types';
-import { useFirebaseData, useFirestoreTable } from '@/hooks/use-firebase-data';
+import { useFirebaseData, useFirestoreTable, useFirestoreWallets } from '@/hooks/use-firebase-data';
 import { useToast } from '@/hooks/use-toast';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
@@ -76,6 +76,7 @@ interface AddTransactionSheetProps {
 export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selectedWalletId }: AddTransactionSheetProps) {
   const { wallets, tags } = useFirebaseData();
   const { addItem: addTransaction, updateItem: updateTransaction } = useFirestoreTable<Transaction>('transactions');
+  const { updateWalletBalance } = useFirestoreWallets();
   const { toast } = useToast();
 
   const isEditMode = !!transaction;
@@ -102,13 +103,12 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 createdAt: transaction.createdAt instanceof Date ? transaction.createdAt : new Date(transaction.createdAt as string),
                 walletId: transaction.walletId,
                 tagId: transaction.tagId,
-                // In edit mode, we don't support changing transfer details, so peerWallet is not set
                 peerWalletId: undefined, 
             });
         } else {
             form.reset({
                 type: 'expense',
-                amount: undefined, // Default to empty instead of 0
+                amount: undefined,
                 description: '',
                 createdAt: new Date(),
                 walletId: selectedWalletId || wallets[0]?.id,
@@ -130,74 +130,55 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
      }
 
      if (isEditMode && transaction) {
-        // NOTE: Editing transfer transactions is complex and not supported in this simplified UI.
-        // We only allow updating details of a single transaction.
-        const { type, peerWalletId, ...updates } = data; // Cannot update type or transfer details
-        await updateTransaction(transaction.id, {
-            ...updates,
-            sourceWalletId: null, // Clear any legacy transfer link
-        });
-        toast({
-            title: "Thành công!",
-            description: "Đã cập nhật giao dịch.",
-        });
+        const { type, peerWalletId, ...updates } = data;
+        await updateTransaction(transaction.id, { ...updates });
+        
+        const amountDifference = (updates.type === 'income' ? updates.amount : -updates.amount) - (transaction.type === 'income' ? transaction.amount : -transaction.amount);
+
+        // Update original wallet if it changed
+        if(transaction.walletId !== updates.walletId) {
+            const oldAmount = transaction.type === 'income' ? -transaction.amount : transaction.amount;
+            await updateWalletBalance(transaction.walletId, oldAmount, 'add');
+            const newAmount = updates.type === 'income' ? updates.amount : -updates.amount;
+            await updateWalletBalance(updates.walletId, newAmount, 'add');
+        } else {
+            await updateWalletBalance(updates.walletId, amountDifference, 'add');
+        }
+        
+        toast({ title: "Thành công!", description: "Đã cập nhật giao dịch." });
 
     } else if (isTransfer && data.peerWalletId) {
-        // Handle transfer creation
         const sourceWalletId = data.type === 'expense' ? data.walletId : data.peerWalletId;
         const destinationWalletId = data.type === 'expense' ? data.peerWalletId : data.walletId;
 
         const sourceWallet = wallets.find(w => w.id === sourceWalletId);
         const destinationWallet = wallets.find(w => w.id === destinationWalletId);
 
-        if (!sourceWallet || !destinationWallet) {
-            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy ví.' });
-            return false;
-        }
+        if (!sourceWallet || !destinationWallet) return false;
 
         const transferExpenseTag = tags.find(t => t.name === 'Chuyển khoản' && t.type === 'expense');
         const transferIncomeTag = tags.find(t => t.name === 'Nhận tiền' && t.type === 'income');
         
-        if (!transferExpenseTag || !transferIncomeTag) {
-            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy hạng mục "Chuyển khoản" hoặc "Nhận tiền". Vui lòng reset dữ liệu trong cài đặt.' });
-            return false;
-        }
+        if (!transferExpenseTag || !transferIncomeTag) return false;
 
         // Create expense from source wallet
-        await addTransaction({
-            type: 'expense',
-            amount: data.amount,
-            description: data.description || `Chuyển tiền đến ${destinationWallet.name}`,
-            tagId: transferExpenseTag.id,
-            walletId: sourceWallet.id,
-            createdAt: data.createdAt,
-            sourceWalletId: null
-        });
+        await addTransaction({ type: 'expense', amount: data.amount, description: data.description || `Chuyển đến ${destinationWallet.name}`, tagId: transferExpenseTag.id, walletId: sourceWallet.id, createdAt: data.createdAt });
+        await updateWalletBalance(sourceWallet.id, -data.amount, 'add');
 
         // Create income to destination wallet
-         await addTransaction({
-            type: 'income',
-            amount: data.amount,
-            description: data.description || `Nhận tiền từ ${sourceWallet.name}`,
-            tagId: transferIncomeTag.id,
-            walletId: destinationWallet.id,
-            createdAt: data.createdAt,
-            sourceWalletId: null
-        });
+         await addTransaction({ type: 'income', amount: data.amount, description: data.description || `Nhận từ ${sourceWallet.name}`, tagId: transferIncomeTag.id, walletId: destinationWallet.id, createdAt: data.createdAt });
+         await updateWalletBalance(destinationWallet.id, data.amount, 'add');
 
-        toast({
-            title: "Thành công!",
-            description: "Đã tạo giao dịch chuyển tiền.",
-        });
+        toast({ title: "Thành công!", description: "Đã tạo giao dịch chuyển tiền." });
 
     } else {
         // Regular income/expense
         const { peerWalletId, ...transactionData } = data;
-        await addTransaction({...transactionData, sourceWalletId: null});
-        toast({
-          title: "Thành công!",
-          description: "Đã thêm giao dịch mới.",
-        });
+        await addTransaction({...transactionData});
+        const amount = transactionData.type === 'income' ? transactionData.amount : -transactionData.amount;
+        await updateWalletBalance(transactionData.walletId, amount, 'add');
+        
+        toast({ title: "Thành công!", description: "Đã thêm giao dịch mới." });
     }
     return true;
   }
@@ -210,9 +191,8 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
 
   const handleSaveAndNew = async (data: TransactionFormValues) => {
     if (await saveTransaction(data)) {
-        // Reset form but keep some fields
         form.reset({
-            ...data, // This keeps wallet, date, type
+            ...data,
             amount: undefined,
             description: '',
             tagId: undefined,
@@ -252,7 +232,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                 <Tabs
                   value={field.value}
                   onValueChange={(value) => {
-                    if(isEditMode) return; // Prevent changing type in edit mode
+                    if(isEditMode) return;
                     const newType = value as TransactionType;
                     field.onChange(newType);
                     form.setValue('tagId', '');
@@ -396,7 +376,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, transaction, selecte
                                 tag={tag}
                                 isSelected={field.value === tag.id}
                                 onClick={() => {
-                                    // Prevent changing tag for edited transactions
                                     if(isEditMode && (tag.name === 'Chuyển khoản' || tag.name === 'Nhận tiền')) return;
                                     field.onChange(tag.id);
                                     if (tag.name !== 'Chuyển khoản' && tag.name !== 'Nhận tiền') {

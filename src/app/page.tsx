@@ -15,9 +15,7 @@ export default function Home() {
   const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    // Set a default wallet if none is selected, once data is loaded
     if (!isLoading && wallets.length > 0 && !selectedWalletId) {
-        // Check local storage for previously selected wallet
         const storedWalletId = localStorage.getItem('selectedWalletId');
         if (storedWalletId && wallets.some(w => w.id === storedWalletId)) {
             setSelectedWalletId(storedWalletId);
@@ -27,7 +25,6 @@ export default function Home() {
     }
   }, [wallets, selectedWalletId, isLoading]);
   
-  // Save selected wallet to local storage
   useEffect(() => {
       if (selectedWalletId) {
           localStorage.setItem('selectedWalletId', selectedWalletId);
@@ -39,17 +36,6 @@ export default function Home() {
   const filteredTransactions = selectedWalletId 
     ? transactions.filter(t => t.walletId === selectedWalletId)
     : [];
-
-  const totalIncome = filteredTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = (selectedWallet?.initialBalance ?? 0) + totalIncome - totalExpense;
-
 
   return (
     <div className="container mx-auto p-4 space-y-6 pb-28 md:pb-4">
@@ -66,7 +52,7 @@ export default function Home() {
         </Button>
       </header>
       
-      {isLoading ? (
+      {isLoading || !selectedWallet ? (
         <div className="grid grid-cols-2 gap-4">
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
@@ -75,9 +61,9 @@ export default function Home() {
         </div>
       ) : (
          <OverviewCards 
-          balance={balance}
-          totalIncome={totalIncome}
-          totalExpense={totalExpense}
+          balance={selectedWallet.balance}
+          totalIncome={selectedWallet.totalIncome}
+          totalExpense={selectedWallet.totalExpense}
           wallets={wallets}
           selectedWalletId={selectedWalletId}
           onWalletChange={setSelectedWalletId}
