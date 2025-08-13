@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LogOut, Download, Upload, Trash2, type LucideIcon } from "lucide-react";
+import { ChevronRight, LogOut, Download, Upload, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,7 +121,6 @@ export default function SettingsPage() {
                 if(typeof content === 'string') {
                     const data = JSON.parse(content);
                     if(Array.isArray(data.wallets) && Array.isArray(data.tags) && Array.isArray(data.transactions)) {
-                        // Pass the raw data, including original IDs, to the state
                         setImportFileContent({
                             wallets: data.wallets,
                             tags: data.tags,
@@ -154,6 +153,7 @@ export default function SettingsPage() {
         toast({ title: "Thành công!", description: "Dữ liệu đã được nhập thành công." });
     } catch (error) {
         const err = error as Error;
+        toast({ variant: "destructive", title: "Lỗi nhập dữ liệu", description: err.message });
         console.error("Import failed in component:", err);
     } finally {
         setImportFileContent(null);
