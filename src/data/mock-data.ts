@@ -12,17 +12,17 @@ export const mockTags: Omit<Tag, 'id' | 'createdAt'>[] = [
   { name: 'Sức khỏe', icon: 'HeartPulse', textColor: 'text-pink-500', bgColor: 'bg-pink-100', type: 'expense' },
   { name: 'Giáo dục', icon: 'GraduationCap', textColor: 'text-teal-500', bgColor: 'bg-teal-100', type: 'expense' },
   { name: 'Quà tặng', icon: 'Gift', textColor: 'text-pink-500', bgColor: 'bg-pink-100', type: 'expense' },
-  { name: 'Khác', icon: 'MoreHorizontal', textColor: 'text-gray-500', bgColor: 'bg-gray-100', type: 'expense' },
+  { name: 'Khác', icon: 'Coins', textColor: 'text-gray-500', bgColor: 'bg-gray-100', type: 'expense' },
   
   // Income Tags
   { name: 'Nhận tiền', icon: 'ArrowRightLeft', textColor: 'text-gray-500', bgColor: 'bg-gray-100', type: 'income' },
-  { name: 'Lương', icon: 'Briefcase', textColor: 'text-green-500', bgColor: 'bg-green-100', type: 'income' },
+  { name: 'Lương', icon: 'Landmark', textColor: 'text-green-500', bgColor: 'bg-green-100', type: 'income' },
   { name: 'Thưởng', icon: 'Gift', textColor: 'text-yellow-500', bgColor: 'bg-yellow-100', type: 'income' },
   { name: 'Thu nhập phụ', icon: 'Plus', textColor: 'text-teal-500', bgColor: 'bg-teal-100', type: 'income' },
-  { name: 'Khác', icon: 'MoreHorizontal', textColor: 'text-gray-500', bgColor: 'bg-gray-100', type: 'income' },
+  { name: 'Khác', icon: 'Coins', textColor: 'text-gray-500', bgColor: 'bg-gray-100', type: 'income' },
 ];
 
 export const mockWallets: Omit<Wallet, 'id' | 'createdAt'>[] = [
-  { name: 'Ví chính', initialBalance: 500 },
-  { name: 'Tiết kiệm', initialBalance: 2000 },
+  { name: 'Ví chính', initialBalance: 5000000 },
+  { name: 'Tiết kiệm', initialBalance: 20000000 },
 ];

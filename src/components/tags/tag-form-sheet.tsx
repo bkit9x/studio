@@ -27,19 +27,14 @@ import {
 
 const spendingIcons = [
   'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
-  'Plane', 'House', 'PiggyBank', 'ArrowRightLeft', 'BanknoteArrowUp', 'BanknoteArrowDown', 'Coffee', 'Pizza',
+  'Plane', 'House', 'PiggyBank', 'ArrowRightLeft', 'Banknote', 'Coffee', 'Pizza',
   'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
-  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake',
+  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake', 'Coins',
   'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer'
 ] as const;
 
 const incomeIcons = [
-  'ShoppingCart', 'Utensils', 'Car', 'Home', 'Shirt', 'HeartPulse', 'Gift', 'GraduationCap',
-  'Plane', 'House', 'PiggyBank', 'ArrowRightLeft', 'BanknoteArrowUp', 'BanknoteArrowDown', 'Coffee', 'Pizza',
-  'Droplets', 'Plug', 'Wifi', 'Phone', 'PawPrint', 'Train', 'Bus', 'Bicycle',
-  'Dumbbell', 'Sprout', 'Ticket', 'Landmark', 'Wrench', 'Baby', 'Cake',
-  'Laptop', 'Tablet', 'Smartphone', 'Watch', 'Tv', 'Headphones', 'MousePointer',
-  'Plus'
+  'ArrowRightLeft', 'Landmark', 'Gift', 'Plus', 'Coins'
 ] as const;
 
 const iconNames = [...new Set([...spendingIcons, ...incomeIcons])];
@@ -162,7 +157,7 @@ export function TagFormSheet({ isOpen, onOpenChange, tag }: TagFormSheetProps) {
       }
   }, [tagType, selectedIconName, form]);
 
-  const availableIcons = tagType === 'income' ? incomeIcons : iconNames;
+  const availableIcons = tagType === 'income' ? incomeIcons : spendingIcons;
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
