@@ -45,7 +45,7 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
     
     const transactionDate = transaction.createdAt instanceof Date 
         ? transaction.createdAt 
-        : new Date(transaction.createdAt);
+        : new Date(transaction.createdAt as string);
 
     const isIncome = transaction.type === 'income';
     const formattedTime = isMounted ? format(transactionDate, 'HH:mm') : null;
@@ -87,7 +87,7 @@ const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction
 
 export function TransactionList({ transactions }: { transactions: Transaction[] }) {
     const { tags } = useFirebaseData();
-    const { deleteItem: deleteTransaction } = useFirestoreTable<Transaction>('transactions');
+    const { deleteItem: deleteTransaction, updateItem: updateTransaction } = useFirestoreTable<Transaction>('transactions');
     
     const [visibleTransactions, setVisibleTransactions] = useState<Transaction[]>([]);
     const [page, setPage] = useState(1);
@@ -113,8 +113,12 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
     const getTagById = (id: string) => tags.find(t => t.id === id);
 
     const handleUpdateRequest = (tx: Transaction) => {
-        setTransactionToUpdate(tx);
-        setIsSheetOpen(true);
+        // Since the balance update logic on 'update' is complex, 
+        // we'll prevent editing for now as implemented in the hook.
+        // The hook will show a toast.
+        updateTransaction(tx.id, {});
+        // setTransactionToUpdate(tx);
+        // setIsSheetOpen(true);
     };
 
     const handleDeleteRequest = (tx: Transaction) => {
@@ -125,7 +129,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
     const handleDeleteConfirm = async () => {
         if (!transactionToDelete) return;
         
-        await deleteTransaction(transactionToDelete.id);
+        await deleteTransaction(transactionToDelete.id, transactionToDelete);
 
         toast({ title: "Thành công!", description: "Đã xóa giao dịch." });
 
@@ -134,7 +138,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
     };
     
     const groupedTransactions = visibleTransactions.reduce((acc, tx) => {
-        const date = tx.createdAt instanceof Date ? tx.createdAt : new Date(tx.createdAt);
+        const date = tx.createdAt instanceof Date ? tx.createdAt : new Date(tx.createdAt as string);
         const dateKey = format(date, 'yyyy-MM-dd');
         if (!acc[dateKey]) {
             acc[dateKey] = [];

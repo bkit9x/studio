@@ -31,7 +31,7 @@ const WalletItem = ({ wallet, onEdit, onDelete }: { wallet: Wallet; onEdit: () =
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{wallet.name}</CardTitle>
+                <CardTitle className="text-xl">{wallet.name}</CardTitle>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -160,7 +160,7 @@ export default function WalletsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Tiếp tục</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Xóa</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
