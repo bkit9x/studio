@@ -23,7 +23,6 @@ import { useToast } from './use-toast';
 import { mockTags, mockWallets } from '@/data/mock-data';
 
 export const seedInitialDataForUser = async (userId: string) => {
-    // Check if data already exists to be absolutely sure
     const walletsCheckRef = collection(db, `users/${userId}/wallets`);
     const walletsCheckSnapshot = await getDocs(query(walletsCheckRef));
     if (!walletsCheckSnapshot.empty) {
@@ -74,7 +73,6 @@ export function useFirebaseData() {
         return onSnapshot(q, (querySnapshot) => {
              const data = querySnapshot.docs.map(doc => {
                 const docData = doc.data();
-                // Firestore Timestamps need to be converted to JS Dates
                 for (const key in docData) {
                     if (docData[key] instanceof Timestamp) {
                        docData[key] = docData[key].toDate();
@@ -105,7 +103,6 @@ export function useFirebaseData() {
     
     const batch = writeBatch(db);
     
-    // Fetch all document IDs to delete
     const walletsSnapshot = await getDocs(collection(db, `users/${user.uid}/wallets`));
     walletsSnapshot.forEach(doc => batch.delete(doc.ref));
 
@@ -118,10 +115,10 @@ export function useFirebaseData() {
     await batch.commit();
   };
 
-  const bulkInsert = async (
-    newWallets: Omit<Wallet, 'id'>[],
-    newTags: Omit<Tag, 'id'>[],
-    newTransactions: Omit<Transaction, 'id'>[]
+ const bulkInsert = async (
+    newWallets: Wallet[],
+    newTags: Tag[],
+    newTransactions: Transaction[]
   ) => {
     if (!user) throw new Error("User not authenticated");
     
@@ -129,47 +126,70 @@ export function useFirebaseData() {
         await clearAllData();
 
         const batch = writeBatch(db);
+        const oldToNewWalletIdMap = new Map<string, string>();
+        const oldToNewTagIdMap = new Map<string, string>();
 
-        // Process Wallets and Tags first to get their new IDs if needed
-        newWallets.forEach(wallet => {
-            const walletRef = doc(collection(db, `users/${user.uid}/wallets`));
-            batch.set(walletRef, { ...wallet, createdAt: serverTimestamp() });
-        });
+        // Wallets
+        for (const wallet of newWallets) {
+            const oldId = wallet.id;
+            const { id, ...walletData } = wallet;
+            const newWalletRef = doc(collection(db, `users/${user.uid}/wallets`));
+            batch.set(newWalletRef, { ...walletData, createdAt: serverTimestamp() });
+            oldToNewWalletIdMap.set(oldId, newWalletRef.id);
+        }
 
-        newTags.forEach(tag => {
-            const tagRef = doc(collection(db, `users/${user.uid}/tags`));
-            batch.set(tagRef, { ...tag, createdAt: serverTimestamp() });
-        });
+        // Tags
+        for (const tag of newTags) {
+            const oldId = tag.id;
+            const { id, ...tagData } = tag;
+            const newTagRef = doc(collection(db, `users/${user.uid}/tags`));
+            batch.set(newTagRef, { ...tagData, createdAt: serverTimestamp() });
+            oldToNewTagIdMap.set(oldId, newTagRef.id);
+        }
         
-        // Process Transactions
-        newTransactions.forEach(transaction => {
-            const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
-            
+        // Transactions
+        for (const transaction of newTransactions) {
+            const { id, ...transactionData } = transaction;
+
+            const newWalletId = oldToNewWalletIdMap.get(transaction.walletId);
+            const newTagId = oldToNewTagIdMap.get(transaction.tagId);
+
+            if (!newWalletId || !newTagId) {
+                console.warn(`Skipping transaction with missing wallet/tag: ${transaction.description}`);
+                continue;
+            }
+
             let finalDate: Timestamp;
             const rawDate = transaction.createdAt;
 
-            if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate) {
+             if (rawDate && typeof rawDate === 'object' && 'seconds' in rawDate && 'nanoseconds' in rawDate && !(rawDate instanceof Date)) {
                 finalDate = new Timestamp((rawDate as any).seconds, (rawDate as any).nanoseconds);
-            } else if (typeof rawDate === 'string' && new Date(rawDate).toString() !== 'Invalid Date') {
-                finalDate = Timestamp.fromDate(new Date(rawDate));
             } else if (rawDate instanceof Date) {
                 finalDate = Timestamp.fromDate(rawDate);
+            } else if (typeof rawDate === 'string' && new Date(rawDate).toString() !== 'Invalid Date') {
+                finalDate = Timestamp.fromDate(new Date(rawDate));
             } else {
-                 throw new Error(`Định dạng ngày không hợp lệ cho giao dịch: ${transaction.description}`);
+                 toast({ variant: 'destructive', title: `Lỗi định dạng ngày`, description: `Giao dịch "${transaction.description}" có định dạng ngày không hợp lệ.` });
+                 continue; // Skip this transaction
             }
             
             const finalTransaction = {
-                ...transaction,
+                ...transactionData,
+                walletId: newWalletId,
+                tagId: newTagId,
                 createdAt: finalDate,
             };
 
-            batch.set(transactionRef, finalTransaction);
-        });
+            const newTransactionRef = doc(collection(db, `users/${user.uid}/transactions`));
+            batch.set(newTransactionRef, finalTransaction);
+        }
         
         await batch.commit();
-    } catch (error) {
+
+    } catch (error: any) {
         console.error("Lỗi trong quá trình nhập dữ liệu:", error);
-        throw error; // Re-throw the error to be caught in the component
+        toast({ variant: 'destructive', title: "Lỗi nhập dữ liệu", description: error.message || "Đã xảy ra lỗi không xác định." });
+        throw error;
     }
   };
 

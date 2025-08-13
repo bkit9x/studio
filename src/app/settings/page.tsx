@@ -27,7 +27,6 @@ import { Timestamp } from "firebase/firestore";
 
 
 const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
-    // Renders a div, but can be a button if an onClick handler is provided.
     const Component = onClick && !asChild ? 'button' : 'div';
     return (
     <Component
@@ -42,17 +41,19 @@ const SettingsItem = ({ children, onClick, asChild = false }: { children: React.
     )
 }
 
+type ImportData = {
+    wallets: Wallet[];
+    tags: Tag[];
+    transactions: Transaction[];
+}
+
 export default function SettingsPage() {
   const { auth, user } = useFirebase();
   const router = useRouter();
   const { wallets, tags, transactions, bulkInsert, clearAllData } = useFirebaseData();
   const { toast } = useToast();
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
-  const [importFileContent, setImportFileContent] = useState<{
-    wallets: Omit<Wallet, 'id' | 'createdAt'>[];
-    tags: Omit<Tag, 'id' | 'createdAt'>[];
-    transactions: Omit<Transaction, 'id'>[];
-  } | null>(null);
+  const [importFileContent, setImportFileContent] = useState<ImportData | null>(null);
 
 
   const handleSignOut = async () => {
@@ -70,7 +71,7 @@ export default function SettingsPage() {
       a.download = 'fintrack_data.json';
       a.click();
       URL.revokeObjectURL(url);
-    } else { // CSV
+    } else { 
         const escapeCsvCell = (cell: any) => `"${String(cell ?? '').replace(/"/g, '""')}"`;
         
         const rows = [
@@ -78,7 +79,6 @@ export default function SettingsPage() {
             ...transactions.map(t => {
                 let formattedDate = '';
                 if (t.createdAt) {
-                    // Handle both Date and Firestore Timestamp objects
                     const date = t.createdAt instanceof Timestamp 
                         ? t.createdAt.toDate() 
                         : new Date(t.createdAt as string | Date);
@@ -120,18 +120,12 @@ export default function SettingsPage() {
                 const content = e.target?.result;
                 if(typeof content === 'string') {
                     const data = JSON.parse(content);
-                    // Basic validation to ensure the file has the correct structure
                     if(Array.isArray(data.wallets) && Array.isArray(data.tags) && Array.isArray(data.transactions)) {
-                        // Strip only IDs from the imported data, keep other fields like createdAt
-                        const walletsToImport = data.wallets.map(({ id, ...w }: Wallet) => w);
-                        const tagsToImport = data.tags.map(({ id, ...t }: Tag) => t);
-                        // IMPORTANT: Keep createdAt field for transactions for later processing
-                        const transactionsToImport = data.transactions.map(({ id, ...tx }: Transaction) => tx);
-                        
+                        // Pass the raw data, including original IDs, to the state
                         setImportFileContent({
-                            wallets: walletsToImport,
-                            tags: tagsToImport,
-                            transactions: transactionsToImport
+                            wallets: data.wallets,
+                            tags: data.tags,
+                            transactions: data.transactions,
                         });
                     } else {
                         toast({ variant: "destructive", title: "Lỗi", description: "Tệp JSON không hợp lệ hoặc sai cấu trúc." });
@@ -143,7 +137,6 @@ export default function SettingsPage() {
         };
         reader.readAsText(file);
     }
-    // Reset file input so user can select the same file again
     event.target.value = '';
   }
   
@@ -161,7 +154,7 @@ export default function SettingsPage() {
         toast({ title: "Thành công!", description: "Dữ liệu đã được nhập thành công." });
     } catch (error) {
         const err = error as Error;
-        toast({ variant: "destructive", title: "Lỗi nhập dữ liệu", description: err.message });
+        console.error("Import failed in component:", err);
     } finally {
         setImportFileContent(null);
     }
@@ -170,7 +163,6 @@ export default function SettingsPage() {
   const handleResetConfirm = async () => {
     try {
         await clearAllData();
-        // After clearing, re-seed the initial mock data
         await seedInitialDataForUser(user!.uid);
         toast({ title: "Thành công", description: "Đã reset toàn bộ dữ liệu."});
     } catch (error) {
@@ -181,8 +173,6 @@ export default function SettingsPage() {
     }
   }
 
-  // Define a function that imports initial data
-  // This is wrapped in a try-catch to handle potential errors
   const seedInitialData = async (uid: string) => {
     try {
       await seedInitialDataForUser(uid);
@@ -272,7 +262,6 @@ export default function SettingsPage() {
       
     </div>
     
-     {/* Import Confirmation Dialog */}
       <AlertDialog open={!!importFileContent} onOpenChange={() => setImportFileContent(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -288,7 +277,6 @@ export default function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset Confirmation Dialog */}
        <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
