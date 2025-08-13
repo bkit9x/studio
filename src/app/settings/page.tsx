@@ -26,8 +26,8 @@ import { seedInitialDataForUser } from "@/hooks/use-firebase-data";
 import { Timestamp } from "firebase/firestore";
 
 
-const SettingsItem = ({ children, onClick, asChild = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean }) => {
-    const Component = onClick && !asChild ? 'button' : 'div';
+const SettingsItem = ({ children, onClick, asChild = false, isTrigger = false }: { children: React.ReactNode, onClick?: () => void, asChild?: boolean, isTrigger?: boolean }) => {
+    const Component = asChild ? 'div' : 'button';
     return (
     <Component
       className="flex w-full items-center justify-between p-4 hover:bg-secondary/50 rounded-lg cursor-pointer text-left"
@@ -36,7 +36,7 @@ const SettingsItem = ({ children, onClick, asChild = false }: { children: React.
         <div className="flex items-center gap-3">
          {children}
         </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        {isTrigger ? <ChevronRight className="h-5 w-5 text-muted-foreground" /> : null}
     </Component>
     )
 }
@@ -207,9 +207,9 @@ export default function SettingsPage() {
             <CardTitle className="text-xl">Tuỳ chỉnh</CardTitle>
         </CardHeader>
         <CardContent className="divide-y p-0">
-            <SettingsItem><span>Ngôn ngữ</span></SettingsItem>
-            <SettingsItem><span>Đơn vị tiền tệ</span></SettingsItem>
-            <SettingsItem><span>Giao diện</span></SettingsItem>
+            <SettingsItem isTrigger><span>Ngôn ngữ</span></SettingsItem>
+            <SettingsItem isTrigger><span>Đơn vị tiền tệ</span></SettingsItem>
+            <SettingsItem isTrigger><span>Giao diện</span></SettingsItem>
         </CardContent>
       </Card>
       
@@ -219,15 +219,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y p-0">
           <DropdownMenu>
-             <DropdownMenuTrigger asChild>
-                <SettingsItem asChild>
-                  <>
-                    <Download className="h-5 w-5 text-muted-foreground" />
-                    <span>Xuất dữ liệu</span>
-                  </>
+             <DropdownMenuTrigger className="w-full">
+                <SettingsItem isTrigger>
+                  <Download className="h-5 w-5 text-muted-foreground" />
+                  <span>Xuất dữ liệu</span>
                 </SettingsItem>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-auto">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-[calc(var(--radix-dropdown-menu-trigger-width)-1.6rem)]">
               <DropdownMenuItem onClick={() => handleExport('json')}>
                 Xuất ra JSON
               </DropdownMenuItem>
@@ -237,13 +235,13 @@ export default function SettingsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <SettingsItem onClick={() => document.getElementById('import-input')?.click()}>
+          <SettingsItem onClick={() => document.getElementById('import-input')?.click()} isTrigger>
             <Upload className="h-5 w-5 text-muted-foreground" />
             <span>Nhập dữ liệu</span>
             <input type="file" id="import-input" accept=".json" className="hidden" onChange={handleImportRequest} />
           </SettingsItem>
           
-          <SettingsItem onClick={() => setIsResetAlertOpen(true)}>
+          <SettingsItem onClick={() => setIsResetAlertOpen(true)} isTrigger>
              <Trash2 className="h-5 w-5 text-destructive" />
              <span className="text-destructive">Reset dữ liệu</span>
           </SettingsItem>
