@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddTransactionSheet } from '@/components/add-transaction-sheet';
 import { Button } from '@/components/ui/button';
 
+const PAGE_SIZE = 20;
 
 const TransactionItem = ({ transaction, tag, onUpdate, onDelete }: { transaction: Transaction, tag: Tag | undefined, onUpdate: () => void, onDelete: () => void }) => {
     const [isMounted, setIsMounted] = useState(false);
@@ -88,6 +89,21 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
     const { tags } = useFirebaseData();
     const { deleteItem: deleteTransaction, bulkDelete: bulkDeleteTransactions } = useFirestoreTable<Transaction>('transactions');
     
+    const [visibleTransactions, setVisibleTransactions] = useState<Transaction[]>([]);
+    const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        setVisibleTransactions(transactions.slice(0, PAGE_SIZE));
+        setPage(1);
+    }, [transactions]);
+
+    const loadMore = () => {
+        const nextPage = page + 1;
+        const newVisibleTransactions = transactions.slice(0, nextPage * PAGE_SIZE);
+        setVisibleTransactions(newVisibleTransactions);
+        setPage(nextPage);
+    };
+
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -131,7 +147,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
         setTransactionToDelete(null);
     };
     
-    const groupedTransactions = transactions.reduce((acc, tx) => {
+    const groupedTransactions = visibleTransactions.reduce((acc, tx) => {
         const date = tx.createdAt instanceof Date ? tx.createdAt : new Date(tx.createdAt);
         const dateKey = format(date, 'yyyy-MM-dd');
         if (!acc[dateKey]) {
@@ -178,6 +194,11 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                     </Card>
                 </div>
             ))}
+            {visibleTransactions.length < transactions.length && (
+                <Button onClick={loadMore} variant="outline" className="w-full">
+                    Tải thêm
+                </Button>
+            )}
              <AddTransactionSheet 
                 isOpen={isSheetOpen} 
                 onOpenChange={setIsSheetOpen} 
