@@ -228,13 +228,13 @@ export default function SettingsPage() {
           <DropdownMenu>
              <DropdownMenuTrigger asChild>
                 <SettingsItem asChild>
-                  <>
+                  <div>
                     <div className="flex items-center gap-3">
                       <Download className="h-5 w-5 text-muted-foreground" />
                       <span>Xuất dữ liệu</span>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </>
+                  </div>
                 </SettingsItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-[calc(var(--radix-dropdown-menu-trigger-width)-1.6rem)]">
