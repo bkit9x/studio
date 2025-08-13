@@ -22,11 +22,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
-const WalletItem = ({ wallet, transactions, onEdit, onDelete }: { wallet: Wallet; transactions: Transaction[], onEdit: () => void; onDelete: () => void; }) => {
-    const relevantTransactions = transactions.filter(t => t.walletId === wallet.id);
-    const income = relevantTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const expense = relevantTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    const balance = wallet.initialBalance + income - expense;
+const WalletItem = ({ wallet, onEdit, onDelete }: { wallet: Wallet; onEdit: () => void; onDelete: () => void; }) => {
+
+    const balance = wallet.balance ?? wallet.initialBalance ?? 0;
+    const income = wallet.totalIncome ?? 0;
+    const expense = wallet.totalExpense ?? 0;
 
     return (
         <Card>
@@ -140,7 +140,6 @@ export default function WalletsPage() {
             <WalletItem 
                 key={wallet.id} 
                 wallet={wallet} 
-                transactions={transactions} 
                 onEdit={() => handleEditWallet(wallet)}
                 onDelete={() => handleDeleteRequest(wallet.id)}
             />
